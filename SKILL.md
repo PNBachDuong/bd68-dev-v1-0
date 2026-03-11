@@ -1,6 +1,6 @@
 ---
 name: bd68-dev-v1-0
-description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, or producing the short GPT-5.4 token cost summary at chat wrap-up.
+description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, using the Impeccable design compass before frontend brainstorming or planning, or producing the short GPT-5.4 token cost summary at chat wrap-up.
 ---
 
 # BD68 Dev v1.0
@@ -9,6 +9,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Continue BD68 or WildSoul work with the existing Codex setup.
 - Review or explain the current MCP and skill stack.
 - Decide whether a candidate skill is worth adding.
+- Check the Impeccable design compass before frontend brainstorming or design planning.
 - Output the short token and cost summary at chat wrap-up.
 
 ## Do Not Use This Skill For
@@ -26,6 +27,12 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
+
+## Design Compass
+- Before brainstorming frontend ideas or writing a design plan, review [references/impeccable.md](references/impeccable.md).
+- Treat Impeccable as a design north star, not as a mandatory install.
+- Use it to pressure-test ideas against common AI-looking anti-patterns before committing to a direction.
+- Keep the output compact: choose one clear aesthetic direction, list 2-4 non-negotiable design principles, and avoid over-specifying decorative details too early.
 
 ## Update Logging
 - Maintain `UPDATE_LOG.md` for every approved change to this installed Codex skill.

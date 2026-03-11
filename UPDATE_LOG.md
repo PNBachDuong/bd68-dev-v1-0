@@ -17,4 +17,5 @@ Track every approved change to the installed Codex skill and every approved GitH
 | 2026-03-11 | codex+github | Added pricing and estimation rules to the GPT-5.4 wrap-up profile. | `SKILL.md` | Synced to GitHub after approval. |
 | 2026-03-11 | codex+github | Updated pricing profile to GPT-5.4-only and revised full cost formula. | `SKILL.md` | Includes current pricing and fallback wording. |
 | 2026-03-11 | codex+github | Added VFS wrap-up metrics to the summary block. | `SKILL.md` | Added `VFS tiết kiệm` and `VFS giảm` lines. |
-| 2026-03-11 | codex | Added rule to maintain this update log for future approved changes. | `SKILL.md`, `UPDATE_LOG.md` | Created tracking file in installed skill. |
+| 2026-03-11 | codex+github | Added update log tracking for future approved changes. | `SKILL.md`, `UPDATE_LOG.md` | GitHub synced at commit `5bbbc43`. |
+| 2026-03-11 | codex | Added Impeccable as a design compass reference for brainstorming and planning. | `SKILL.md`, `references/impeccable.md`, `UPDATE_LOG.md` | Local Codex skill only. GitHub not synced yet. |
