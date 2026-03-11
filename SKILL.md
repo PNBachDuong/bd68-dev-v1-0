@@ -40,18 +40,9 @@ Tổng phí USD: ...
 - Pricing:
   - Input: `$2.50 / 1M tokens`
   - Output: `$15.00 / 1M tokens`
-  - Cache read: `$0.250 / 1M tokens`
-  - Cache write: `$0 / 1M tokens`
-- Default cache assumption for this profile:
-  - `cache_read_tokens = input_tokens * 0.99`
-  - `cache_write_tokens = 0`
-  - `uncached_input_tokens = input_tokens * 0.01`
-- Total cost formula for this profile:
-  - `((input_tokens * 0.01) * 2.50 + (input_tokens * 0.99) * 0.250 + output_tokens * 15.00 + cache_write_tokens * 0) / 1_000_000`
+  - Cache read: `$14.85 / 1M tokens`
+  - Cache write: `$14.85 / 1M tokens`
+- Full cost formula for this profile:
+  - `(input_tokens * 2.50 + output_tokens * 15.00 + cache_read_tokens * 14.85 + cache_write_tokens * 14.85) / 1_000_000`
 - If exact usage is available, use the exact values.
-- If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision:
-  - `Token Input`: estimate from current conversation context tokens when that is the only visible metric.
-  - `Token Output`: estimate from the assistant response generated in that turn.
-  - `Cache read`: estimate as `99%` of `Token Input`.
-  - `Cache write`: use `0` unless the environment exposes real cache counts.
-- When using estimated values, say briefly that they are estimates rather than billing-exact numbers.
+- If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision.
