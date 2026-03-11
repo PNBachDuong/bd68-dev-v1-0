@@ -34,6 +34,8 @@ MCP overhead token: thấp/vừa/cao
 Token Input: ...
 Token Output: ...
 Tổng phí USD: ...
+VFS tiết kiệm: ... token
+VFS giảm: ...% khi không sử dụng
 ```
 - This pricing profile is for `GPT-5.4` only.
 - If the model changes, rename this pricing profile or create a new skill/version before using a new formula.
@@ -46,3 +48,7 @@ Tổng phí USD: ...
   - `(input_tokens * 2.50 + output_tokens * 15.00 + cache_read_tokens * 14.85 + cache_write_tokens * 14.85) / 1_000_000`
 - If exact usage is available, use the exact values.
 - If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision.
+- VFS reporting rules:
+  - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
+  - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
+  - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
