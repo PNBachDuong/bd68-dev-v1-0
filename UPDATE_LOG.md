@@ -20,3 +20,7 @@ Track every approved change to the installed Codex skill and every approved GitH
 | 2026-03-11 | codex+github | Added update log tracking for future approved changes. | `SKILL.md`, `UPDATE_LOG.md` | GitHub synced at commit `5bbbc43`. |
 | 2026-03-11 | codex | Added Impeccable as a design compass reference for brainstorming and planning. | `SKILL.md`, `references/impeccable.md`, `UPDATE_LOG.md` | Local Codex skill only. GitHub not synced yet. |
 | 2026-03-11 | github | Synced Impeccable design compass to GitHub. | `SKILL.md`, `UPDATE_LOG.md`, `references/impeccable.md` | Commit `83cdf42`. |
+| 2026-03-11 | codex | Added local-only `concise-planning` test guidance for WildSoul planning workflows. | `SKILL.md`, `references/concise-planning.md`, `UPDATE_LOG.md`, `AGENTS.md` | Workspace-only test before any global or GitHub promotion. |
+| 2026-03-11 | codex | Consolidated WildSoul local context hygiene and concise-planning test rules, then reloaded them for this session. | `SKILL.md`, `UPDATE_LOG.md`, `AGENTS.md` | Focused on early new-thread handoff, single bootstrap, narrow recall, compact-at-wrap-up, and vfs-first retrieval. |
+| 2026-03-12 | codex | Promoted context hygiene and concise-planning defaults from WildSoul local testing into the global BD68 Dev v1.0 skill and global MCP policy. | `SKILL.md`, `UPDATE_LOG.md`, `references/concise-planning.md`, `C:\Users\ngath\.codex\AGENTS.md`, `AGENTS.md` | Added early new-thread guidance, single bootstrap discipline, narrow recall, compact-at-wrap-up, vfs-first retrieval, and concise-planning defaults. |
+

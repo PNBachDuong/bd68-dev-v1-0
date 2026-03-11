@@ -1,6 +1,6 @@
 ---
 name: bd68-dev-v1-0
-description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, using the Impeccable design compass before frontend brainstorming or planning, or producing the short GPT-5.4 token cost summary at chat wrap-up.
+description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, using the Impeccable design compass before frontend brainstorming or planning, applying concise-planning and context hygiene defaults for long-running sessions, checking the antigravity skill library only when an actually needed skill is missing, or producing the short GPT-5.4 token cost summary at chat wrap-up.
 ---
 
 # BD68 Dev v1.0
@@ -10,29 +10,60 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Review or explain the current MCP and skill stack.
 - Decide whether a candidate skill is worth adding.
 - Check the Impeccable design compass before frontend brainstorming or design planning.
+- Use concise-planning when the user asks for a plan, roadmap, or task breakdown.
+- Use the antigravity skill library as a lookup source only when the current installed skills do not cover a repeated need.
 - Output the short token and cost summary at chat wrap-up.
 
 ## Do Not Use This Skill For
 - Generic coding work that does not depend on the BD68 setup.
 - Third-party API implementation already covered by `get-api-docs` and `chub`.
 - Routine verification already covered by `lint-and-validate`.
+- Browsing the antigravity catalog by default when an installed skill already fits.
 
 ## Retrieval Order
-- Start with `memory_bootstrap` at session start and `memory_recall` for follow-up work.
+- Start with `memory_bootstrap` exactly once at session start.
+- In the same session, do not call `memory_bootstrap` again unless the user explicitly asks for a reset-style re-bootstrap.
+- Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
 - Use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
-- Use `vfs` before `rg` or `grep` for local code structure, declarations, signatures, classes, methods, and types.
+- Use `vfs` before `rg`, `grep`, or broad file reads for local code structure, declarations, signatures, classes, methods, and types.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
+
+## MemoryAI Guardrails
+- Treat repeated `memory_bootstrap` in one thread as a warning sign for token waste.
+- Do not call `memory_store` or similar write tools just to restate an already-known preference; recall first.
+- Call `memory_compact` only at chat wrap-up, explicit `chốt phiên`, or when the context is clearly near a limit and compacting is necessary to continue safely.
+- Do not compact during active exploration unless the context is genuinely near a limit and the user-facing work would otherwise suffer.
+- Use `memory_health` only when checking a suspected context-growth problem or right before deciding whether to compact.
+
+## Context Hygiene
+- Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates too much stale context.
+- Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
+- Use `vfs` first when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
 
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
 
+## Skill Library Lookup
+- Before looking outside the installed stack, check whether an existing skill already covers the task.
+- If a repeated need is still uncovered, review [references/antigravity.md](references/antigravity.md).
+- Treat antigravity-awesome-skills as a lookup library, not a default skill source.
+- Search narrowly: start from bundles or a shortlist, then open only the candidate `SKILL.md` files that match the need.
+- Do not install a skill from antigravity until the use case is repeated, the overlap is low, and the likely token or workflow benefit is clear.
+
 ## Design Compass
 - Before brainstorming frontend ideas or writing a design plan, review [references/impeccable.md](references/impeccable.md).
 - Treat Impeccable as a design north star, not as a mandatory install.
 - Use it to pressure-test ideas against common AI-looking anti-patterns before committing to a direction.
 - Keep the output compact: choose one clear aesthetic direction, list 2-4 non-negotiable design principles, and avoid over-specifying decorative details too early.
+
+## Concise Planning
+- Before writing a plan, roadmap, or task breakdown, review [references/concise-planning.md](references/concise-planning.md).
+- Keep plans short, execution-biased, and retrieval-backed.
+- Prefer the minimum useful plan over exhaustive decomposition.
+- Use `now`, `next`, and `later` for larger tasks.
+- When the next concrete action is obvious, act instead of expanding the plan.
 
 ## Update Logging
 - Maintain `UPDATE_LOG.md` for every approved change to this installed Codex skill.
