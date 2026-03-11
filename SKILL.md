@@ -27,6 +27,11 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
 
+## Update Logging
+- Maintain `UPDATE_LOG.md` for every approved change to this installed Codex skill.
+- When an approved GitHub sync happens, add a matching entry to the repo copy of `UPDATE_LOG.md` and include the commit id after the push.
+- Keep each entry short and factual: date, scope, summary, files, notes.
+
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text
