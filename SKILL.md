@@ -35,8 +35,16 @@ Token Input: ...
 Token Output: ...
 Tổng phí USD: ...
 ```
-- GPT-5.4 pricing:
+- Pricing:
   - Input: `$2.50 / 1M tokens`
   - Output: `$15.00 / 1M tokens`
-- Total cost formula: `(input_tokens * 2.50 + output_tokens * 15.00) / 1_000_000`.
-- If exact usage is unavailable, say so briefly instead of inventing numbers.
+  - Cache read: `$0.250 / 1M tokens`
+  - Cache write: `$0 / 1M tokens`
+- Total cost formula:
+  - `(input_tokens * 2.50 + output_tokens * 15.00 + cache_read_tokens * 0.250 + cache_write_tokens * 0) / 1_000_000`
+- If exact usage is available, use the exact values.
+- If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision:
+  - `Token Input`: estimate from current conversation context tokens when that is the only visible metric.
+  - `Token Output`: estimate from the assistant response generated in that turn.
+  - `Cache read` and `Cache write`: use `0` unless the environment exposes real cache counts.
+- When using estimated values, say briefly that they are estimates rather than billing-exact numbers.
