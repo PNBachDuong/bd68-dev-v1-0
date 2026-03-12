@@ -10,4 +10,7 @@ Use these references only when needed:
 - `@bd68-dev-v1-0/references/concise-planning.md` before writing a plan, roadmap, or task breakdown.
 - `@bd68-dev-v1-0/references/antigravity.md` only when the current tool or skill stack is insufficient and a repeated need exists.
 
+Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
+Before implementation, confirm API and SDK behavior with official docs.
+
 Treat the BD68 profile as the default operating model for BD68 and WildSoul work in this environment.

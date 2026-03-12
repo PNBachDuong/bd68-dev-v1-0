@@ -47,3 +47,19 @@ Rule:
   - a lookup library
   - not a default install list
   - not a direct implementation source of truth
+
+## `awesome-llm-apps` (idea catalog only)
+- Local file: none (external catalog reference)
+- Upstream repo: `Shubhamsaboo/awesome-llm-apps`
+- Upstream URL:
+  - `https://github.com/Shubhamsaboo/awesome-llm-apps`
+- Use for:
+  - idea discovery
+  - quick pattern scouting
+  - finding candidate demos to evaluate
+- Treat as:
+  - an idea catalog only
+  - not a technical baseline
+  - not an implementation source of truth
+- Guardrail:
+  - before implementation, confirm API and SDK behavior with official docs
