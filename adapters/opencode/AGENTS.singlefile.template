@@ -17,7 +17,11 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - If the environment provides `vfs`, use `vfs` before `rg`, `grep`, or broad read-all file inspection when the goal is local code structure discovery.
 - Use raw text search only for bodies, strings, config keys, JSON, CSS, Markdown, or other literal text search.
 - Only go back to GitHub or broader external lookup when the local curated reference is missing or insufficient.
-
+- Retrieval loop guard:
+  - Never repeat an identical `vfs` call (same path and same pattern/query) within the same turn or subtask.
+  - Default `vfs` budget per subtask: one discovery call plus one refinement call.
+  - If `vfs` returns empty, unchanged, or non-actionable results twice, stop `vfs` and switch to targeted `rg` or file reads.
+  - Skip `vfs` for non-structure tasks such as policy discussion, debugging tool behavior, token-cost reporting, or status summaries.
 ## Memory Guardrails
 - Do not repeat `memory_bootstrap` in the same session unless the user explicitly asks for a reset-style re-bootstrap.
 - Do not write memory just to restate a known preference.
@@ -28,7 +32,7 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
 - Keep retrieval narrow and current-task-specific.
 - Prefer a clean handoff to a new thread over trying to rescue a saturated thread.
-
+- Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
 ## Pack References
 - `references/` contains curated GitHub-backed references bundled with this pack.
 - `references/SOURCE_INDEX.md` maps each local reference to its upstream source and intended use.
@@ -61,3 +65,5 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
 - Keep the short GPT-5.4 cost block format if the environment supports cost wrap-up.
+
+

@@ -30,7 +30,11 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Use `vfs` before `rg`, `grep`, or broad file reads for local code structure, declarations, signatures, classes, methods, and types.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
 - Only go back to GitHub, web, or broader lookup when the local curated reference is missing, insufficient, or clearly out of scope.
-
+- Retrieval loop guard:
+  - Never repeat an identical `vfs` call (same path and same pattern/query) within the same turn or subtask.
+  - Default `vfs` budget per subtask: one discovery call plus one refinement call.
+  - If `vfs` returns empty, unchanged, or non-actionable results twice, stop `vfs` and switch to targeted `rg` or file reads.
+  - Skip `vfs` for non-structure tasks such as policy discussion, debugging tool behavior, token-cost reporting, or status summaries.
 ## MemoryAI Guardrails
 - Treat repeated `memory_bootstrap` in one thread as a warning sign for token waste.
 - Do not call `memory_store` or similar write tools just to restate an already-known preference; recall first.
@@ -42,7 +46,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates too much stale context.
 - Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
 - Use `vfs` first when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
-
+- Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
@@ -110,3 +114,5 @@ VFS giảm: ...% khi không sử dụng
   - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
   - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
   - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
+
+
