@@ -65,6 +65,12 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Use `now`, `next`, and `later` for larger tasks.
 - When the next concrete action is obvious, act instead of expanding the plan.
 
+## Context Window Budget
+- Treat `400,000` tokens as the global maximum context budget when the runtime supports it.
+- Under the current `llmgate` + `gpt-5.4` runtime, the observed effective model context window is `258,400`, so the practical hard limit remains `258,400` until the provider or model changes.
+- Open a new thread well before the effective limit; under the current runtime, treat `~250,000` tokens as a warning threshold and hand off earlier if the thread starts to drift.
+- Do not rely on `memory_compact` to rescue an already-saturated thread; prefer a clean handoff into a new thread.
+
 ## Update Logging
 - Maintain `UPDATE_LOG.md` for every approved change to this installed Codex skill.
 - When an approved GitHub sync happens, add a matching entry to the repo copy of `UPDATE_LOG.md` and include the commit id after the push.
@@ -95,3 +101,4 @@ VFS giảm: ...% khi không sử dụng
   - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
   - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
   - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
+
