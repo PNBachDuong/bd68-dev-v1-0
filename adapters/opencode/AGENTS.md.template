@@ -1,0 +1,10 @@
+# BD68 Dev v1.0 Loader For OpenCode
+
+Load `@bd68-dev-v1-0/BD68_PROFILE.md` at the start of the session.
+
+Use these references only when needed:
+- `@bd68-dev-v1-0/references/impeccable.md` before frontend brainstorming or design planning.
+- `@bd68-dev-v1-0/references/concise-planning.md` before writing a plan, roadmap, or task breakdown.
+- `@bd68-dev-v1-0/references/antigravity.md` only when the current tool or skill stack is insufficient and a repeated need exists.
+
+Treat the BD68 profile as the default operating model for BD68 and WildSoul work in this environment.
