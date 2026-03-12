@@ -47,6 +47,8 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Only look outside the current stack when a repeated need is not covered cleanly.
 - If skill discovery is needed, review `references/antigravity.md` narrowly.
 - Do not browse catalogs by default.
+- Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
+- Before implementation, confirm API and SDK behavior with official docs.
 
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
