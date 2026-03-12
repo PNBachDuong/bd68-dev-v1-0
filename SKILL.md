@@ -89,6 +89,16 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - When an approved GitHub sync happens, add a matching entry to the repo copy of `UPDATE_LOG.md` and include the commit id after the push.
 - Keep each entry short and factual: date, scope, summary, files, notes.
 
+## VFS Turn Report
+On any assistant turn where `vfs` is called, append exactly:
+```text
+Mức sử dụng MCP: thấp/vừa/cao | Tên MCP đã gọi: <name của mcp>
+VFS: bật/tắt | tối ưu: ...%
+```
+- If exact optimization percent is unavailable for that turn, explicitly mark estimate, for example:
+  - `VFS: bật | tối ưu: ~...% (ước tính)`
+  - or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`
+- Never fill a fake exact percentage.
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text
@@ -114,5 +124,6 @@ VFS giảm: ...% khi không sử dụng
   - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
   - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
   - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
+
 
 

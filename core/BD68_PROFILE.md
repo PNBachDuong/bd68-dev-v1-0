@@ -62,9 +62,16 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 - Before implementation, confirm API and SDK behavior with official docs.
 
+## VFS Turn Report
+- On any assistant turn where `vfs` is called, append:
+  - `Mức sử dụng MCP: thấp/vừa/cao | Tên MCP đã gọi: <name của mcp>`
+  - `VFS: bật/tắt | tối ưu: ...%`
+- If exact optimization percent is unavailable, explicitly mark estimate (ước tính), for example: `VFS: bật | tối ưu: ~...% (ước tính)` or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`.
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
 - Keep the short GPT-5.4 cost block format if the environment supports cost wrap-up.
+
+
 
 
