@@ -1,6 +1,6 @@
 # BD68 Dev v1.0
 
-Portable agent pack for the BD68 and WildSoul workflow.
+`BD68 Dev v1.0` la bo kit agent portable, doc lap IDE cho workflow WildSoul. Goi nay chuan hoa quy trinh retrieval-first (`memoryai -> chub -> vfs`), planning ngan gon, va dung bo reference local da curate kem provenance de lam viec nhanh va on dinh; cac repo tong hop nhu `awesome-llm-apps` chi dung de tham khao y tuong, con implement luon bam docs chinh thuc.
 
 This repo is now organized as an IDE-agnostic pack:
 - `core/` is the source of truth for the shared operating profile
