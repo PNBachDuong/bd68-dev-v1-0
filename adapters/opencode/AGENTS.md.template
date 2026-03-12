@@ -13,5 +13,6 @@ Use these references only when needed:
 
 Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 Before implementation, confirm API and SDK behavior with official docs.
+At end-of-session wrap-up, include the Guard Context status lines defined in `@bd68-dev-v1-0/BD68_PROFILE.md`.
 
 Treat the BD68 profile as the default operating model for BD68 and WildSoul work in this environment.

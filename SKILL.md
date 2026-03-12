@@ -117,6 +117,8 @@ Token Output: ...
 Tổng phí USD: ...
 VFS tiết kiệm: ... token
 VFS giảm: ...% khi không sử dụng
+Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime/manual
+Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
 ```
 - This pricing profile is for `GPT-5.4` only.
 - If the model changes, rename this pricing profile or create a new skill/version before using a new formula.
@@ -133,6 +135,10 @@ VFS giảm: ...% khi không sử dụng
   - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
   - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
   - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
+- Guard Context reporting rules:
+  - If payload guard was applied in the current task, report actual mode (`Safe/Balanced/Aggressive`) and measured reduction.
+  - If payload guard was not applied, set `Guard Context: tắt | chế độ: N/A | đường chạy: N/A`.
+  - If reduction percent is inferred, label it as estimate in the `nguồn` field.
 
 
 

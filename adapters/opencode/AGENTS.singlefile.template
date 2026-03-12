@@ -79,6 +79,9 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
 - Keep the short GPT-5.4 cost block format if the environment supports cost wrap-up.
+- On end-of-session wrap-up, include Guard Context status:
+  - `Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime/manual`
+  - `Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính`
 
 
 
