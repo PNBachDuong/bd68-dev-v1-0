@@ -1,6 +1,7 @@
 # BD68 Dev v1.0 Loader For OpenCode
 
 Load `@bd68-dev-v1-0/BD68_PROFILE.md` at the start of the session.
+Apply the `Codex Thread Payload Hygiene` rules from that profile during request assembly.
 
 Before using a bundled reference, open `@bd68-dev-v1-0/references/SOURCE_INDEX.md`.
 Treat the files in `@bd68-dev-v1-0/references/` as curated GitHub-backed local retrieval sources, not as optional notes.

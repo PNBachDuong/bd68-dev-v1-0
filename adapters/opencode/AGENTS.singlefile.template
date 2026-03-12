@@ -33,6 +33,15 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Keep retrieval narrow and current-task-specific.
 - Prefer a clean handoff to a new thread over trying to rescue a saturated thread.
 - Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
+
+## Codex Thread Payload Hygiene
+- Treat sudden thread token growth as a reliability bug, not only a pricing issue.
+- In request assembly, keep one canonical message representation (`messages` or `extra_body.messages`) and never send both.
+- Do not include internal encrypted payloads, action envelopes, or raw debug blobs in model input.
+- Replace inline `data:image/*;base64` history entries with lightweight attachment references.
+- Store full tool logs out-of-band; keep only compact tool summaries in conversational context.
+- Enforce a pre-send token budget guard: trim tool output, drop non-essential payload, and summarize old turns when over budget.
+- Use a sliding-window dialog history plus a compact summary for older turns.
 ## Pack References
 - `references/` contains curated GitHub-backed references bundled with this pack.
 - `references/SOURCE_INDEX.md` maps each local reference to its upstream source and intended use.

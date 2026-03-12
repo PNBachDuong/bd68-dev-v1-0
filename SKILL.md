@@ -47,6 +47,15 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
 - Use `vfs` first when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
 - Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
+
+## Codex Thread Payload Hygiene
+- Treat sudden thread token growth as a reliability bug, not only a pricing issue.
+- In request assembly, keep one canonical message representation (`messages` or `extra_body.messages`) and never send both.
+- Do not include internal encrypted payloads, action envelopes, or raw debug blobs in model input.
+- Replace inline `data:image/*;base64` history entries with lightweight attachment references.
+- Store full tool logs out-of-band; keep only compact tool summaries in conversational context.
+- Enforce a pre-send token budget guard: trim tool output, drop non-essential payload, and summarize old turns when over budget.
+- Use a sliding-window dialog history plus a compact summary for older turns.
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
