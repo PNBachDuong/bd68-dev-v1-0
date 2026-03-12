@@ -60,6 +60,7 @@ if ($Target -eq "opencode") {
     Ensure-Directory $refRoot
 
     Copy-Item (Join-Path $repoRoot 'core\BD68_PROFILE.md') (Join-Path $installRoot 'BD68_PROFILE.md') -Force
+    Copy-Item (Join-Path $repoRoot 'references\SOURCE_INDEX.md') (Join-Path $refRoot 'SOURCE_INDEX.md') -Force
     Copy-Item (Join-Path $repoRoot 'references\impeccable.md') (Join-Path $refRoot 'impeccable.md') -Force
     Copy-Item (Join-Path $repoRoot 'references\concise-planning.md') (Join-Path $refRoot 'concise-planning.md') -Force
     Copy-Item (Join-Path $repoRoot 'references\antigravity.md') (Join-Path $refRoot 'antigravity.md') -Force
@@ -75,4 +76,6 @@ if ($Target -eq "opencode") {
     Write-Host "Pack source: core/ + adapters/opencode/"
     Write-Host "Open a new OpenCode session to load the updated profile."
 }
+
+
 

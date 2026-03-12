@@ -24,9 +24,12 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Start with `memory_bootstrap` exactly once at session start.
 - In the same session, do not call `memory_bootstrap` again unless the user explicitly asks for a reset-style re-bootstrap.
 - Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
+- Before using a pack reference, open `references/SOURCE_INDEX.md` to confirm which local file matches the need and what GitHub source it mirrors or adapts.
+- When the pack already contains a curated local reference for the current task, read that local reference first and treat it as a valid retrieval source with provenance.
 - Use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - Use `vfs` before `rg`, `grep`, or broad file reads for local code structure, declarations, signatures, classes, methods, and types.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
+- Only go back to GitHub, web, or broader lookup when the local curated reference is missing, insufficient, or clearly out of scope.
 
 ## MemoryAI Guardrails
 - Treat repeated `memory_bootstrap` in one thread as a warning sign for token waste.
@@ -45,21 +48,27 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
 
+## Pack References
+- `references/SOURCE_INDEX.md` is the provenance index for local references included in this pack.
+- Treat files in `references/` as curated GitHub-backed retrieval sources, not as casual notes.
+- Prefer the local curated reference over re-browsing its upstream GitHub source when the local file already covers the current need.
+- Cite or mention when a conclusion comes from a local curated reference versus fresh external retrieval.
+
 ## Skill Library Lookup
 - Before looking outside the installed stack, check whether an existing skill already covers the task.
-- If a repeated need is still uncovered, review [references/antigravity.md](references/antigravity.md).
+- If a repeated need is still uncovered, open `references/SOURCE_INDEX.md` and then review [references/antigravity.md](references/antigravity.md).
 - Treat antigravity-awesome-skills as a lookup library, not a default skill source.
 - Search narrowly: start from bundles or a shortlist, then open only the candidate `SKILL.md` files that match the need.
 - Do not install a skill from antigravity until the use case is repeated, the overlap is low, and the likely token or workflow benefit is clear.
 
 ## Design Compass
-- Before brainstorming frontend ideas or writing a design plan, review [references/impeccable.md](references/impeccable.md).
+- Before brainstorming frontend ideas or writing a design plan, open `references/SOURCE_INDEX.md` and then review [references/impeccable.md](references/impeccable.md).
 - Treat Impeccable as a design north star, not as a mandatory install.
 - Use it to pressure-test ideas against common AI-looking anti-patterns before committing to a direction.
 - Keep the output compact: choose one clear aesthetic direction, list 2-4 non-negotiable design principles, and avoid over-specifying decorative details too early.
 
 ## Concise Planning
-- Before writing a plan, roadmap, or task breakdown, review [references/concise-planning.md](references/concise-planning.md).
+- Before writing a plan, roadmap, or task breakdown, open `references/SOURCE_INDEX.md` and then review [references/concise-planning.md](references/concise-planning.md).
 - Keep plans short, execution-biased, and retrieval-backed.
 - Prefer the minimum useful plan over exhaustive decomposition.
 - Use `now`, `next`, and `later` for larger tasks.
@@ -101,4 +110,3 @@ VFS giảm: ...% khi không sử dụng
   - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
   - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
   - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
-

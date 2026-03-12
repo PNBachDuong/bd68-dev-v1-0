@@ -4,7 +4,7 @@ Portable agent pack for the BD68 and WildSoul workflow.
 
 This repo is now organized as an IDE-agnostic pack:
 - `core/` is the source of truth for the shared operating profile
-- `references/` contains optional guidance files
+- `references/` contains curated GitHub-backed retrieval sources and optional guidance files
 - `adapters/` contains IDE-specific bootstrap files
 - `scripts/` contains installers or helper scripts
 
@@ -15,6 +15,7 @@ This repo is now organized as an IDE-agnostic pack:
 
 ## Structure
 - `core/BD68_PROFILE.md`
+- `references/SOURCE_INDEX.md`
 - `references/impeccable.md`
 - `references/concise-planning.md`
 - `references/antigravity.md`
@@ -24,6 +25,12 @@ This repo is now organized as an IDE-agnostic pack:
 - `scripts/install-agent-pack.ps1`
 - `SKILL.md`
 - `agents/openai.yaml`
+
+## References
+- `references/` is not just a notes folder.
+- Each file in `references/` is a curated local reference with a specific use and upstream provenance.
+- Open `references/SOURCE_INDEX.md` first to see what each local reference maps to on GitHub and when to use it.
+- Prefer the local curated reference before re-browsing the upstream GitHub source when the local file already covers the task.
 
 ## Purpose
 - keep retrieval order consistent with `memoryai`, `chub`, and `vfs`

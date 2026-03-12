@@ -11,9 +11,12 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 ## Retrieval Order
 - If the environment provides `memoryai`, call `memory_bootstrap` exactly once at session start.
 - Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
+- Open `references/SOURCE_INDEX.md` before using a bundled reference so the local source and upstream provenance are explicit.
+- If this pack already contains a curated local reference for the current need, read that local file first and treat it as a valid retrieval source.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - If the environment provides `vfs`, use `vfs` before `rg`, `grep`, or broad read-all file inspection when the goal is local code structure discovery.
 - Use raw text search only for bodies, strings, config keys, JSON, CSS, Markdown, or other literal text search.
+- Only go back to GitHub or broader external lookup when the local curated reference is missing or insufficient.
 
 ## Memory Guardrails
 - Do not repeat `memory_bootstrap` in the same session unless the user explicitly asks for a reset-style re-bootstrap.
@@ -25,6 +28,11 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
 - Keep retrieval narrow and current-task-specific.
 - Prefer a clean handoff to a new thread over trying to rescue a saturated thread.
+
+## Pack References
+- `references/` contains curated GitHub-backed references bundled with this pack.
+- `references/SOURCE_INDEX.md` maps each local reference to its upstream source and intended use.
+- Treat these files as first-pass retrieval sources, not as optional notes.
 
 ## Concise Planning
 - For planning, roadmap, or implementation breakdown requests, prefer concise-planning.
@@ -40,15 +48,11 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Do not rely on compacting alone to save an already-overloaded thread.
 
 ## Design Compass
-- Before brainstorming frontend ideas or writing a design plan, apply the Impeccable rule set:
-  - choose one clear visual direction
-  - avoid generic AI-looking layouts
-  - keep 2-4 non-negotiable design principles
-  - avoid decorative over-specification too early
+- Before brainstorming frontend ideas or writing a design plan, apply the Impeccable rule set from `references/impeccable.md`.
 
 ## Skill Library Lookup
 - Only look outside the current stack when a repeated need is not covered cleanly.
-- If skill discovery is needed, treat antigravity as a narrow lookup library, not a default browsing source.
+- If skill discovery is needed, check `references/SOURCE_INDEX.md` and then treat antigravity as a narrow lookup library, not a default browsing source.
 - Do not browse catalogs by default.
 
 ## Output Expectations

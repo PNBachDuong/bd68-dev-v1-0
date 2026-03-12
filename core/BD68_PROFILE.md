@@ -11,9 +11,12 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 ## Retrieval Order
 - If the environment provides `memoryai`, call `memory_bootstrap` exactly once at session start.
 - Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
+- Open `references/SOURCE_INDEX.md` before using a pack reference so the source and intent are explicit.
+- If the pack already contains a curated local reference for the current need, read that local file first and treat it as a valid retrieval source with provenance.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - If the environment provides `vfs`, use `vfs` before `rg`, `grep`, or broad read-all file inspection when the goal is local code structure discovery.
 - Use raw text search only for bodies, strings, config keys, JSON, CSS, Markdown, or other literal text search.
+- Only go back to GitHub or broader external retrieval when the local curated reference is missing or insufficient.
 
 ## Memory Guardrails
 - Do not repeat `memory_bootstrap` in the same session unless the user explicitly asks for a reset-style re-bootstrap.
@@ -25,6 +28,11 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
 - Keep retrieval narrow and current-task-specific.
 - Prefer a clean handoff to a new thread over trying to rescue a saturated thread.
+
+## Pack References
+- `references/` contains curated GitHub-backed references bundled with this pack.
+- `references/SOURCE_INDEX.md` maps each local reference to its upstream GitHub source and intended use.
+- Treat these files as first-pass retrieval sources, not as optional notes.
 
 ## Concise Planning
 - For planning, roadmap, or implementation breakdown requests, prefer concise-planning.
@@ -45,7 +53,7 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 
 ## Skill Library Lookup
 - Only look outside the current stack when a repeated need is not covered cleanly.
-- If skill discovery is needed, review `references/antigravity.md` narrowly.
+- If skill discovery is needed, review `references/antigravity.md` narrowly after checking `references/SOURCE_INDEX.md`.
 - Do not browse catalogs by default.
 - Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 - Before implementation, confirm API and SDK behavior with official docs.
