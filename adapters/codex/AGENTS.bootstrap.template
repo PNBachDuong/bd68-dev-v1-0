@@ -1,10 +1,9 @@
 # BD68 Dev v1.1 Codex Bootstrap
 
-- Use skill `bd68-dev-v1-0` as the default operating profile for BD68/WildSoul work.
+- Use skill `bd_dev_kit` as the default operating profile for BD68/WildSoul work.
 - Prefer retrieval-first flow: `memoryai -> chub -> vfs`.
 - Guard Context runtime path is expected through local proxy `127.0.0.1:8787` when enabled.
 - Always-visible Guard Context line should use proxy metrics from:
   - `scripts/context_guard_proxy_metrics.ps1`
 - If proxy metrics are unavailable, report:
   - `Proxy Input: N/A | Proxy Output: N/A`
-

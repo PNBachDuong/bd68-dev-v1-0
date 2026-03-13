@@ -6,6 +6,7 @@ Files:
 - `scripts/stop_context_guard_proxy.ps1`
 - `scripts/enable_context_guard_proxy.ps1`
 - `scripts/disable_context_guard_proxy.ps1`
+- `scripts/context_guard_proxy_trace.ps1`
 
 ## What it does
 - Adds a local HTTP proxy in front of `llmgate`.
@@ -37,6 +38,21 @@ Health check:
 ```powershell
 curl.exe -s http://127.0.0.1:8787/__guard/health
 ```
+
+Trace latest pipeline metrics:
+```powershell
+.\scripts\context_guard_proxy_trace.ps1 | Format-List *
+```
+
+Auto failover status (default: enabled):
+```powershell
+.\scripts\context_guard_proxy_status.ps1 | Format-List *
+```
+- If proxy is down and config currently points to `http://127.0.0.1:8787`, it auto-switches to `https://llmgate.app/v1`.
+- If proxy is up and config currently points to direct llmgate, it auto-switches back to proxy.
+
+Common StatusLine format (`StatusFormatVersion = v1`):
+- `Proxy local: đang bật/tắt | Guard: bật/tắt | Mode: ... | Proxy Input: ... | Proxy Output: ... | trigger mềm: chưa kích hoạt/đã kích hoạt`
 
 ## Enable in Codex global config
 ```powershell

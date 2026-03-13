@@ -73,7 +73,8 @@ if ($Background.IsPresent) {
         }
     }
 
-    $proc = Start-Process -FilePath $nodePath -ArgumentList @($scriptPath) -PassThru -WindowStyle Hidden
+    $quotedScriptPath = '"' + $scriptPath + '"'
+    $proc = Start-Process -FilePath $nodePath -ArgumentList @($quotedScriptPath) -PassThru -WindowStyle Hidden
     $proc.Id | Set-Content -LiteralPath $pidFile -Encoding ASCII
 
     Start-Sleep -Milliseconds 800

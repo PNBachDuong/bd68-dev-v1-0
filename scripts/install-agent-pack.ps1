@@ -395,7 +395,7 @@ if ($Target -eq "opencode") {
     }
 
     $configRoot = $OpenCodeRootPath
-    $installRoot = Join-Path $configRoot "bd68-dev-v1-0"
+    $installRoot = Join-Path $configRoot "bd_dev_kit"
     $refRoot = Join-Path $installRoot "references"
     $agentsPath = Join-Path $configRoot "AGENTS.md"
 
@@ -429,7 +429,7 @@ if ($Target -eq "codex") {
 
     $codexRoot = $CodexRootPath
     $skillsRoot = Join-Path $codexRoot "skills"
-    $installRoot = Join-Path $skillsRoot "bd68-dev-v1-0"
+    $installRoot = Join-Path $skillsRoot "bd_dev_kit"
     $agentsPath = Join-Path $codexRoot "AGENTS.md"
     $configPath = Join-Path $codexRoot "config.toml"
 

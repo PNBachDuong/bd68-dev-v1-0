@@ -1,11 +1,19 @@
 param(
     [string]$LogPath = ".\scripts\artifacts\context_guard_proxy.log",
     [int]$ScanTail = 300,
-    [int]$MinPreTokens = 20
+    [int]$MinPreTokens = 0,
+    [int]$StaleAfterSeconds = 90,
+    [int]$ProxyPort = 8787
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$statusLineScript = Join-Path $PSScriptRoot "context_guard_status_line.ps1"
+if (-not (Test-Path -LiteralPath $statusLineScript)) {
+    throw "Missing status line helper: $statusLineScript"
+}
+. $statusLineScript
 
 if (-not (Test-Path -LiteralPath $LogPath)) {
     [pscustomobject]@{
@@ -17,7 +25,7 @@ if (-not (Test-Path -LiteralPath $LogPath)) {
 }
 
 $lines = Get-Content -LiteralPath $LogPath -Tail $ScanTail
-$pattern = '^(?<ts>\S+)\s+method=POST\s+path=/v1/responses\s+trigger=(?<trigger>\S+)\s+mode=(?<mode>\S+)\s+applied=(?<applied>\S+)\s+pre=(?<pre>\d+)\s+post=(?<post>\d+)\s+reduction_pct=(?<reduction>[\d.]+)(?:\s+model_in=(?<modelin>\S+)\s+model_out=(?<modelout>\S+)\s+resp_stream=(?<respstream>\S+)\s+usage_parse=(?<usageparse>\S+))?\s+parse_error=(?<parse>\S+)\s+duration_ms=(?<duration>\d+)'
+$pattern = '^(?<ts>\S+)\s+method=POST\s+path=/v1/responses\s+trigger=(?<trigger>\S+)\s+mode=(?<mode>\S+)\s+applied=(?<applied>\S+)(?:\s+pre_chars=(?<prechars>\d+)\s+post_chars=(?<postchars>\d+))?\s+pre=(?<pre>\d+)\s+post=(?<post>\d+)\s+reduction_pct=(?<reduction>[\d.]+)(?:\s+model_in=(?<modelin>\S+)\s+model_out=(?<modelout>\S+)\s+resp_stream=(?<respstream>\S+)\s+usage_parse=(?<usageparse>\S+))?\s+parse_error=(?<parse>\S+)\s+duration_ms=(?<duration>\d+)'
 
 $hit = $null
 $fallback = $null
@@ -65,8 +73,51 @@ $usageParse = $hit.Groups["usageparse"].Value
 
 $softState = if ($trigger -eq "inactive") { "chưa kích hoạt" } else { "đã kích hoạt" }
 $guardState = if ($applied) { "bật" } else { "tắt" }
+$proxyLocalRunning = $false
+try {
+    $healthUrl = "http://127.0.0.1:$ProxyPort/__guard/health"
+    $healthRaw = curl.exe -s $healthUrl
+    if (-not [string]::IsNullOrWhiteSpace($healthRaw)) {
+        $proxyLocalRunning = $true
+    }
+} catch {
+    $proxyLocalRunning = $false
+}
+$proxyLocalState = if ($proxyLocalRunning) { "đang bật" } else { "đang tắt" }
 
-$statusLine = "Guard Context: $guardState | Proxy Input: ~$pre tokens | Proxy Output: ~$post tokens | trigger mềm: $softState"
+$ageSeconds = $null
+$isStale = $false
+try {
+    $ts = [datetimeoffset]::Parse($hit.Groups["ts"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+    $ageSeconds = [int][math]::Max(0, [math]::Round(([datetimeoffset]::UtcNow - $ts).TotalSeconds))
+    if ($ageSeconds -gt $StaleAfterSeconds) {
+        $isStale = $true
+    }
+} catch {
+    $isStale = $false
+}
+
+if ($isStale) {
+    $statusLine = New-ContextGuardStatusLine `
+        -ProxyLocalState $proxyLocalState `
+        -GuardContextState "tắt" `
+        -Mode "N/A" `
+        -ProxyInputTokens $null `
+        -ProxyOutputTokens $null `
+        -SoftTriggerState "chưa kích hoạt" `
+        -IsStale $true `
+        -AgeSeconds $ageSeconds
+} else {
+    $statusLine = New-ContextGuardStatusLine `
+        -ProxyLocalState $proxyLocalState `
+        -GuardContextState $guardState `
+        -Mode $mode `
+        -ProxyInputTokens $pre `
+        -ProxyOutputTokens $post `
+        -SoftTriggerState $softState `
+        -IsStale $false `
+        -AgeSeconds $ageSeconds
+}
 
 [pscustomobject]@{
     Found = $true
@@ -85,5 +136,12 @@ $statusLine = "Guard Context: $guardState | Proxy Input: ~$pre tokens | Proxy Ou
     DurationMs = [int]$hit.Groups["duration"].Value
     LogPath = (Resolve-Path -LiteralPath $LogPath).Path
     MinPreTokens = $MinPreTokens
+    StaleAfterSeconds = $StaleAfterSeconds
+    AgeSeconds = $ageSeconds
+    IsStale = $isStale
+    ProxyPort = $ProxyPort
+    ProxyLocalRunning = $proxyLocalRunning
+    ProxyLocalState = $proxyLocalState
+    StatusFormatVersion = "v1"
     StatusLine = $statusLine
 }

@@ -480,6 +480,8 @@ const server = http.createServer(async (req, res) => {
       `trigger=${decision.trigger}`,
       `mode=${decision.mode}`,
       `applied=${decision.apply}`,
+      `pre_chars=${rawBody.length}`,
+      `post_chars=${outgoingBody.length}`,
       `pre=${preTokens}`,
       `post=${postTokens}`,
       `reduction_pct=${reductionPct}`,

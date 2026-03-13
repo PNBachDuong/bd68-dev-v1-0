@@ -1,18 +1,18 @@
 # BD68 Dev v1.0 Loader For OpenCode
 
-Load `@bd68-dev-v1-0/BD68_PROFILE.md` at the start of the session.
+Load `@bd_dev_kit/BD68_PROFILE.md` at the start of the session.
 Apply the `Codex Thread Payload Hygiene` rules from that profile during request assembly.
 
-Before using a bundled reference, open `@bd68-dev-v1-0/references/SOURCE_INDEX.md`.
-Treat the files in `@bd68-dev-v1-0/references/` as curated GitHub-backed local retrieval sources, not as optional notes.
+Before using a bundled reference, open `@bd_dev_kit/references/SOURCE_INDEX.md`.
+Treat the files in `@bd_dev_kit/references/` as curated GitHub-backed local retrieval sources, not as optional notes.
 
 Use these references only when needed:
-- `@bd68-dev-v1-0/references/impeccable.md` before frontend brainstorming or design planning.
-- `@bd68-dev-v1-0/references/concise-planning.md` before writing a plan, roadmap, or task breakdown.
-- `@bd68-dev-v1-0/references/antigravity.md` only when the current tool or skill stack is insufficient and a repeated need exists.
+- `@bd_dev_kit/references/impeccable.md` before frontend brainstorming or design planning.
+- `@bd_dev_kit/references/concise-planning.md` before writing a plan, roadmap, or task breakdown.
+- `@bd_dev_kit/references/antigravity.md` only when the current tool or skill stack is insufficient and a repeated need exists.
 
 Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 Before implementation, confirm API and SDK behavior with official docs.
-At end-of-session wrap-up, include the Guard Context status lines defined in `@bd68-dev-v1-0/BD68_PROFILE.md`.
+At end-of-session wrap-up, include the Guard Context status lines defined in `@bd_dev_kit/BD68_PROFILE.md`.
 
 Treat the BD68 profile as the default operating model for BD68 and WildSoul work in this environment.

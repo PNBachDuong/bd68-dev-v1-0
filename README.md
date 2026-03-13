@@ -10,6 +10,8 @@ This repo is now organized as an IDE-agnostic pack:
   - `scripts/codex_guard_send.ps1`: preflight payload budget check + auto mode selection (`Safe/Balanced/Aggressive`)
   - `scripts/context_guard_proxy.js`: local runtime proxy for automatic pre-send guard enforcement
   - `scripts/context_guard_proxy_metrics.ps1`: read latest proxy input/output token metrics from runtime log
+  - `scripts/context_guard_proxy_trace.ps1`: show pipeline metrics for `input -> proxy -> llmgate` and `llmgate -> proxy`
+  - `scripts/context_guard_proxy_status.ps1`: proxy health + auto failover switch (`proxy -> direct llmgate` when proxy down)
   - `scripts/start_context_guard_proxy.ps1`: start proxy (foreground or `-Background`)
   - `scripts/enable_context_guard_proxy.ps1`: point global Codex `llmgate` base_url to the local proxy
   - `scripts/disable_context_guard_proxy.ps1`: rollback global Codex config from backup
@@ -68,7 +70,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -Targe
 ```
 
 What it does:
-- syncs this pack into `C:\Users\<user>\.codex\skills\bd68-dev-v1-0`
+- syncs this pack into `C:\Users\<user>\.codex\skills\bd_dev_kit`
 - injects/updates a marked bootstrap block in `C:\Users\<user>\.codex\AGENTS.md`
 - auto-installs MCP binaries for `memoryai`, `chub`, and `vfs` (best effort, with explicit status output)
 - sets proxy runtime base URL to `http://127.0.0.1:8787` under `[model_providers.llmgate]`

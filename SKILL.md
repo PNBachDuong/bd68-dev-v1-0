@@ -1,5 +1,5 @@
 ---
-name: bd68-dev-v1-0
+name: bd_dev_kit
 description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, using the Impeccable design compass before frontend brainstorming or planning, applying concise-planning and context hygiene defaults for long-running sessions, checking the antigravity skill library only when an actually needed skill is missing, or producing the short GPT-5.4 token cost summary at chat wrap-up.
 ---
 
