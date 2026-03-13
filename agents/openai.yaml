@@ -1,4 +1,4 @@
 interface:
-  display_name: "BD68 Dev v1.0"
+  display_name: "BD68 Dev v1.1"
   short_description: "BD68/WildSoul setup and cost wrap-up"
   default_prompt: "Use the BD68 setup only for BD68 or WildSoul sessions, setup review, skill triage, or GPT-5.4 chat cost wrap-up."

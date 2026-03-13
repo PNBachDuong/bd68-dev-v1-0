@@ -3,7 +3,7 @@ name: bd68-dev-v1-0
 description: Personal Codex operating profile for BD68 and WildSoul sessions. Use only when continuing BD68 or WildSoul work, reviewing the custom Codex setup (memoryai, chub, vfs, and installed skills), deciding whether a new skill should be installed or promoted, using the Impeccable design compass before frontend brainstorming or planning, applying concise-planning and context hygiene defaults for long-running sessions, checking the antigravity skill library only when an actually needed skill is missing, or producing the short GPT-5.4 token cost summary at chat wrap-up.
 ---
 
-# BD68 Dev v1.0
+# BD68 Dev v1.1
 
 ## Use This Skill For
 - Continue BD68 or WildSoul work with the existing Codex setup.
@@ -56,6 +56,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Store full tool logs out-of-band; keep only compact tool summaries in conversational context.
 - Enforce a pre-send token budget guard: trim tool output, drop non-essential payload, and summarize old turns when over budget.
 - Use a sliding-window dialog history plus a compact summary for older turns.
+- Runtime option: run `scripts/context_guard_proxy.js` and route `llmgate` through `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
@@ -108,6 +109,19 @@ VFS: bật/tắt | tối ưu: ...%
   - `VFS: bật | tối ưu: ~...% (ước tính)`
   - or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`
 - Never fill a fake exact percentage.
+## Guard Context Always-Visible
+On every assistant turn, append:
+```text
+Guard Context: bật/tắt | Proxy Input: ~... tokens | Proxy Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt
+```
+- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (proxy log), not memoryAI telemetry.
+- For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and proxy input/output metrics.
+- Soft trigger policy:
+  - `< 200,000`: monitor only.
+  - `>= 200,000`: soft trigger on, prepare `Balanced` for the next heavy turn.
+  - `>= 240,000`: apply `Balanced` now and recommend handoff.
+  - `>= 250,000`: apply `Aggressive` and move to a new thread quickly.
+- If proxy metrics are unavailable, set `Proxy Input/Output: N/A` and label source as unavailable.
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text
@@ -117,7 +131,7 @@ Token Output: ...
 Tổng phí USD: ...
 VFS tiết kiệm: ... token
 VFS giảm: ...% khi không sử dụng
-Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime/manual
+Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-proxy/manual
 Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
 ```
 - This pricing profile is for `GPT-5.4` only.

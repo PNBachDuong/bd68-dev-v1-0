@@ -2,6 +2,8 @@
 
 Script: `scripts/codex_payload_guard.ps1`
 
+Coordinator script: `scripts/codex_guard_send.ps1` (preflight + auto mode selection).
+
 ## Purpose
 - Reduce prompt bloat in Codex thread payload logs by:
   - removing internal encrypted/action user payloads,
