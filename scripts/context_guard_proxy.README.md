@@ -4,6 +4,7 @@ Files:
 - `scripts/context_guard_proxy.js`
 - `scripts/start_context_guard_proxy.ps1`
 - `scripts/stop_context_guard_proxy.ps1`
+- `scripts/context_guard_failover_watchdog.ps1`
 - `scripts/enable_context_guard_proxy.ps1`
 - `scripts/disable_context_guard_proxy.ps1`
 - `scripts/context_guard_proxy_trace.ps1`
@@ -27,6 +28,17 @@ Recommended (foreground in a dedicated terminal):
 Optional background mode:
 ```powershell
 .\scripts\start_context_guard_proxy.ps1 -Background
+```
+
+Watchdog failover (default: enabled when start script runs):
+- Polls proxy health every few seconds.
+- Auto switches `config.toml` `base_url`:
+  - proxy down -> `https://llmgate.app/v1`
+  - proxy up -> `http://127.0.0.1:8787` (when switchback enabled)
+
+Tune watchdog interval:
+```powershell
+.\scripts\start_context_guard_proxy.ps1 -Background -WatchdogPollSeconds 2
 ```
 
 Disable apply-at-soft behavior:

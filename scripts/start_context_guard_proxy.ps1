@@ -7,6 +7,10 @@ param(
     [switch]$ApplyAtSoftThreshold,
     [switch]$DisableApplyAtSoftThreshold,
     [string]$LogPath = ".\scripts\artifacts\context_guard_proxy.log",
+    [int]$WatchdogPollSeconds = 3,
+    [bool]$WatchdogSwitchBackWhenProxyUp = $true,
+    [switch]$EnableFailoverWatchdog,
+    [switch]$DisableFailoverWatchdog,
     [switch]$Background
 )
 
@@ -53,6 +57,86 @@ $env:CONTEXT_GUARD_HARD_THRESHOLD = [string]$HardThresholdTokens
 $env:CONTEXT_GUARD_APPLY_AT_SOFT = $applyAtSoft ? "true" : "false"
 $env:CONTEXT_GUARD_LOG_FILE = $resolvedLogPath
 
+$watchdogEnabled = $true
+if ($DisableFailoverWatchdog.IsPresent) {
+    $watchdogEnabled = $false
+}
+if ($EnableFailoverWatchdog.IsPresent) {
+    $watchdogEnabled = $true
+}
+if ($WatchdogPollSeconds -lt 1) {
+    $WatchdogPollSeconds = 1
+}
+
+$watchdogPid = $null
+$watchdogPidFile = Join-Path $PSScriptRoot "artifacts\context_guard_failover_watchdog.pid"
+$watchdogScriptPath = Join-Path $PSScriptRoot "context_guard_failover_watchdog.ps1"
+$proxyScriptName = [System.IO.Path]::GetFileName($scriptPath)
+$watchdogScriptName = [System.IO.Path]::GetFileName($watchdogScriptPath)
+
+function Get-ProcessCommandLine {
+    param([int]$Pid)
+    try {
+        $procInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $Pid"
+        if ($null -eq $procInfo) {
+            return ""
+        }
+        return [string]$procInfo.CommandLine
+    } catch {
+        return ""
+    }
+}
+
+function Start-FailoverWatchdog {
+    param(
+        [switch]$Enabled
+    )
+
+    if (-not $Enabled.IsPresent) {
+        return $null
+    }
+
+    if (-not (Test-Path -LiteralPath $watchdogScriptPath)) {
+        throw "Missing watchdog script: $watchdogScriptPath"
+    }
+
+    $watchdogPidDir = Split-Path -Parent $watchdogPidFile
+    if (-not (Test-Path -LiteralPath $watchdogPidDir)) {
+        New-Item -ItemType Directory -Path $watchdogPidDir | Out-Null
+    }
+
+    if (Test-Path -LiteralPath $watchdogPidFile) {
+        $rawWatchdogPid = (Get-Content -LiteralPath $watchdogPidFile -Raw).Trim()
+        if ($rawWatchdogPid -match '^\d+$') {
+            $existingWatchdogPid = [int]$rawWatchdogPid
+            try {
+                $null = Get-Process -Id $existingWatchdogPid -ErrorAction Stop
+                $cmd = Get-ProcessCommandLine -Pid $existingWatchdogPid
+                if ($cmd -match [regex]::Escape($watchdogScriptName)) {
+                    return $existingWatchdogPid
+                }
+            } catch {
+                # stale pid file; continue
+            }
+        }
+    }
+
+    $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+    $watchdogArgs = @(
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $watchdogScriptPath,
+        "-Port", [string]$Port,
+        "-PollSeconds", [string]$WatchdogPollSeconds,
+        "-SwitchBackWhenProxyUp", [string]$WatchdogSwitchBackWhenProxyUp
+    )
+
+    $watchdogProc = Start-Process -FilePath $pwshPath -ArgumentList $watchdogArgs -PassThru -WindowStyle Hidden
+    $watchdogProc.Id | Set-Content -LiteralPath $watchdogPidFile -Encoding ASCII
+    return $watchdogProc.Id
+}
+
 if ($Background.IsPresent) {
     $pidFile = Join-Path $PSScriptRoot "artifacts\context_guard_proxy.pid"
     $pidDir = Split-Path -Parent $pidFile
@@ -64,11 +148,20 @@ if ($Background.IsPresent) {
         $rawPid = (Get-Content -LiteralPath $pidFile -Raw).Trim()
         if ($rawPid -match '^\d+$') {
             $existingPid = [int]$rawPid
+            $existingAlive = $false
             try {
                 $null = Get-Process -Id $existingPid -ErrorAction Stop
-                throw "Proxy already running with PID $existingPid. Stop it first."
+                $cmd = Get-ProcessCommandLine -Pid $existingPid
+                if ($cmd -match [regex]::Escape($proxyScriptName)) {
+                    $existingAlive = $true
+                } else {
+                    $existingAlive = $false
+                }
             } catch {
-                # stale pid file; continue
+                $existingAlive = $false
+            }
+            if ($existingAlive) {
+                throw "Proxy already running with PID $existingPid. Stop it first."
             }
         }
     }
@@ -76,6 +169,8 @@ if ($Background.IsPresent) {
     $quotedScriptPath = '"' + $scriptPath + '"'
     $proc = Start-Process -FilePath $nodePath -ArgumentList @($quotedScriptPath) -PassThru -WindowStyle Hidden
     $proc.Id | Set-Content -LiteralPath $pidFile -Encoding ASCII
+
+    $watchdogPid = Start-FailoverWatchdog -Enabled:($watchdogEnabled)
 
     Start-Sleep -Milliseconds 800
 
@@ -91,10 +186,16 @@ if ($Background.IsPresent) {
         ApplyAtSoftThreshold = $applyAtSoft
         PidFile = $pidFile
         LogPath = $resolvedLogPath
+        FailoverWatchdogEnabled = $watchdogEnabled
+        FailoverWatchdogPid = $watchdogPid
+        FailoverWatchdogPidFile = $watchdogPidFile
+        WatchdogPollSeconds = $WatchdogPollSeconds
         HealthUrl = "http://127.0.0.1:$Port/__guard/health"
     }
     exit 0
 }
+
+$watchdogPid = Start-FailoverWatchdog -Enabled:($watchdogEnabled)
 
 [pscustomobject]@{
     Started = $true
@@ -106,6 +207,10 @@ if ($Background.IsPresent) {
     HardThresholdTokens = $HardThresholdTokens
     ApplyAtSoftThreshold = $applyAtSoft
     LogPath = $resolvedLogPath
+    FailoverWatchdogEnabled = $watchdogEnabled
+    FailoverWatchdogPid = $watchdogPid
+    FailoverWatchdogPidFile = $watchdogPidFile
+    WatchdogPollSeconds = $WatchdogPollSeconds
     HealthUrl = "http://127.0.0.1:$Port/__guard/health"
 }
 

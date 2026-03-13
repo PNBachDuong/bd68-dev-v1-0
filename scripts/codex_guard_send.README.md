@@ -34,4 +34,4 @@ Returns an object with:
 - whether guard was applied,
 - post-guard estimate and reduction percent,
 - ready-to-print status line:
-  - `Guard Context: bật/tắt | mode: ... | Preflight: ~... tokens | trigger mềm: ...`
+  - `Preflight Guard: bật/tắt | mode: ... | Preflight: ~... tokens | trigger mềm: ... | đường chạy: manual`

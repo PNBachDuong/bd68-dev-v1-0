@@ -176,7 +176,7 @@ $softTriggerStatus = if ($preflightTokens -ge $SoftThresholdTokens) { "đã kíc
 $guardStatus = if ($decision.GuardApplied) { "bật" } else { "tắt" }
 $modeLabel = if ($decision.GuardApplied) { $decision.ModeSelected } else { "N/A" }
 
-$statusLine = "Guard Context: $guardStatus | mode: $modeLabel | Preflight: ~$preflightTokens tokens | trigger mềm: $softTriggerStatus"
+$statusLine = "Preflight Guard: $guardStatus | mode: $modeLabel | Preflight: ~$preflightTokens tokens | trigger mềm: $softTriggerStatus | đường chạy: manual"
 
 [pscustomobject]@{
     InputPath = $resolvedInput
