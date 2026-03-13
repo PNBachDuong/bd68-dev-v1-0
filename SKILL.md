@@ -27,6 +27,9 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Before using a pack reference, open `references/SOURCE_INDEX.md` to confirm which local file matches the need and what GitHub source it mirrors or adapts.
 - When the pack already contains a curated local reference for the current task, read that local reference first and treat it as a valid retrieval source with provenance.
 - Use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
+- If `chub` has no actionable entry or lacks required version-specific detail, use Context7 as fallback/accelerator (`resolve-library-id` -> `query-docs`).
+- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for the session and continue with `chub`/`Context7`/`vfs`.
+- If retrieval does not provide verifiable evidence for a technical claim, return `không đủ dữ liệu` instead of guessing.
 - Use `vfs` before `rg`, `grep`, or broad file reads for local code structure, declarations, signatures, classes, methods, and types.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
 - Only go back to GitHub, web, or broader lookup when the local curated reference is missing, insufficient, or clearly out of scope.
@@ -41,12 +44,14 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Call `memory_compact` only at chat wrap-up, explicit `chốt phiên`, or when the context is clearly near a limit and compacting is necessary to continue safely.
 - Do not compact during active exploration unless the context is genuinely near a limit and the user-facing work would otherwise suffer.
 - Use `memory_health` only when checking a suspected context-growth problem or right before deciding whether to compact.
+- If memory calls fail with repeated `5xx` or timeout errors, stop memory calls for the session and explicitly declare memory unavailable.
 
 ## Context Hygiene
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates too much stale context.
 - Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
 - Use `vfs` first when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
 - Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
+- In memory-degraded mode, do not infer from old memory context; rely only on current-session evidence and retrieval outputs.
 
 ## Codex Thread Payload Hygiene
 - Treat sudden thread token growth as a reliability bug, not only a pricing issue.
@@ -59,6 +64,8 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Runtime option: run `scripts/context_guard_proxy.js` and route `llmgate` through `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
+- Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
+- Anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy graphs).
 - Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
 

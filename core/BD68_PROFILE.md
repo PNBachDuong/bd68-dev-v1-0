@@ -11,9 +11,12 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 ## Retrieval Order
 - If the environment provides `memoryai`, call `memory_bootstrap` exactly once at session start.
 - Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
+- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for that session.
 - Open `references/SOURCE_INDEX.md` before using a pack reference so the source and intent are explicit.
 - If the pack already contains a curated local reference for the current need, read that local file first and treat it as a valid retrieval source with provenance.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
+- If `chub` has no actionable entry or lacks required version-specific detail, use Context7 as fallback/accelerator (`resolve-library-id` then `query-docs`).
+- If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
 - If the environment provides `vfs`, use `vfs` before `rg`, `grep`, or broad read-all file inspection when the goal is local code structure discovery.
 - Use raw text search only for bodies, strings, config keys, JSON, CSS, Markdown, or other literal text search.
 - Only go back to GitHub or broader external retrieval when the local curated reference is missing or insufficient.
@@ -27,6 +30,7 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Do not write memory just to restate a known preference.
 - Call `memory_compact` only at wrap-up, explicit close, or when the context is truly near its limit and compacting is needed to continue safely.
 - Use `memory_health` only when diagnosing context growth or deciding whether compacting is needed.
+- In memory-degraded mode, do not infer from older memory context; rely on fresh retrieval outputs only.
 
 ## Context Hygiene
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
@@ -68,6 +72,7 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Only look outside the current stack when a repeated need is not covered cleanly.
 - If skill discovery is needed, review `references/antigravity.md` narrowly after checking `references/SOURCE_INDEX.md`.
 - Do not browse catalogs by default.
+- For anti-guessing in Python agent flows, prefer `pydantic-ai`, `instructor`, and `langsmith` (`langgraph` optional for orchestration-heavy workflows).
 - Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 - Before implementation, confirm API and SDK behavior with official docs.
 

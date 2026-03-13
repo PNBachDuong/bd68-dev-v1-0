@@ -13,6 +13,10 @@ Use these references only when needed:
 
 Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 Before implementation, confirm API and SDK behavior with official docs.
+For third-party API docs, use `chub` as default retrieval source; use Context7 only as fallback/accelerator when `chub` has no actionable result.
+If `memoryai` returns repeated `5xx` or timeout errors in the same session, stop memory calls for that session and continue in memory-degraded mode.
+If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
+For anti-guessing in Python agent flows, prefer `pydantic-ai`, `instructor`, and `langsmith` (`langgraph` optional for orchestration-heavy workflows).
 At end-of-session wrap-up, include the Guard Context status lines defined in `@bd_dev_kit/BD68_PROFILE.md`.
 
 Treat the BD68 profile as the default operating model for BD68 and WildSoul work in this environment.

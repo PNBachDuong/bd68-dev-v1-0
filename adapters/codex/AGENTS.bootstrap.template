@@ -2,6 +2,10 @@
 
 - Use skill `bd_dev_kit` as the default operating profile for BD68/WildSoul work.
 - Prefer retrieval-first flow: `memoryai -> chub -> vfs`.
+- For third-party API docs, keep `chub` as default and use Context7 only as fallback/accelerator when `chub` has no actionable result.
+- If `memoryai` returns repeated `5xx` or timeout errors, switch to memory-degraded mode (skip memory calls for the session).
+- If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
+- Preferred anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy workflows).
 - Guard Context runtime path is expected through local proxy `127.0.0.1:8787` when enabled.
 - Always-visible Guard Context line should use Codex session token telemetry from:
   - `scripts/context_guard_proxy_metrics.ps1`
