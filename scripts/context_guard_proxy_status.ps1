@@ -225,6 +225,6 @@ $statusLine = New-ContextGuardStatusLine `
     FailoverOldBaseUrl = $failoverOldBaseUrl
     FailoverNewBaseUrl = $failoverNewBaseUrl
     HealthOverride = $HealthOverride
-    StatusFormatVersion = "v1"
+    StatusFormatVersion = "v2"
     StatusLine = $statusLine
 }

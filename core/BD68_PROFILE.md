@@ -78,21 +78,21 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - If exact optimization percent is unavailable, explicitly mark estimate (ước tính), for example: `VFS: bật | tối ưu: ~...% (ước tính)` or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`.
 ## Guard Context Always-Visible
 - On every assistant turn, append:
-  - `Guard Context: bật/tắt | Proxy Input: ~... tokens | Proxy Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt`
-- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (proxy log), not memoryAI telemetry.
-- For real payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and proxy input/output metrics.
+  - `Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt`
+- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (Codex `token_count` session telemetry), not proxy log and not memoryAI telemetry.
+- For real payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 - Soft trigger policy:
   - `< 200,000`: monitor only.
   - `>= 200,000`: soft trigger on, prepare `Balanced` for the next heavy turn.
   - `>= 240,000`: apply `Balanced` now and prefer handoff.
   - `>= 250,000`: apply `Aggressive` and hand off quickly.
-- If proxy metrics are unavailable, set `Proxy Input/Output: N/A` and label source as unavailable.
+- If Codex token telemetry is unavailable, set `Input/Output: N/A` and label source as unavailable.
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
 - Keep the short GPT-5.4 cost block format if the environment supports cost wrap-up.
 - On end-of-session wrap-up, include Guard Context status:
-  - `Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-proxy/manual`
+  - `Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual`
   - `Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính`
 
 

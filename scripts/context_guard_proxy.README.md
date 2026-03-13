@@ -63,8 +63,8 @@ Auto failover status (default: enabled):
 - If proxy is down and config currently points to `http://127.0.0.1:8787`, it auto-switches to `https://llmgate.app/v1`.
 - If proxy is up and config currently points to direct llmgate, it auto-switches back to proxy.
 
-Common StatusLine format (`StatusFormatVersion = v1`):
-- `Proxy local: đang bật/tắt | Guard: bật/tắt | Mode: ... | Proxy Input: ... | Proxy Output: ... | trigger mềm: chưa kích hoạt/đã kích hoạt`
+Common StatusLine format (`StatusFormatVersion = v2`):
+- `Guard: bật/tắt | Mode: ... | Input: ... | Output: ... | trigger mềm: chưa kích hoạt/đã kích hoạt`
 
 ## Enable in Codex global config
 ```powershell

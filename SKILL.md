@@ -112,16 +112,16 @@ VFS: bật/tắt | tối ưu: ...%
 ## Guard Context Always-Visible
 On every assistant turn, append:
 ```text
-Guard Context: bật/tắt | Proxy Input: ~... tokens | Proxy Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt
+Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt
 ```
-- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (proxy log), not memoryAI telemetry.
-- For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and proxy input/output metrics.
+- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (Codex `token_count` session telemetry), not proxy log and not memoryAI telemetry.
+- For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.
 - Soft trigger policy:
   - `< 200,000`: monitor only.
   - `>= 200,000`: soft trigger on, prepare `Balanced` for the next heavy turn.
   - `>= 240,000`: apply `Balanced` now and recommend handoff.
   - `>= 250,000`: apply `Aggressive` and move to a new thread quickly.
-- If proxy metrics are unavailable, set `Proxy Input/Output: N/A` and label source as unavailable.
+- If Codex token telemetry is unavailable, set `Input/Output: N/A` and label source as unavailable.
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text
@@ -131,7 +131,7 @@ Token Output: ...
 Tổng phí USD: ...
 VFS tiết kiệm: ... token
 VFS giảm: ...% khi không sử dụng
-Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-proxy/manual
+Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual
 Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
 ```
 - This pricing profile is for `GPT-5.4` only.

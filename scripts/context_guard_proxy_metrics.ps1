@@ -1,17 +1,25 @@
 param(
-    [string]$LogPath = ".\scripts\artifacts\context_guard_proxy.log",
-    [int]$ScanTail = 300,
+    [string]$CodexRoot = "C:\Users\ngath\.codex",
+    [int]$ScanTail = 600,
+    [int]$MaxRecentFiles = 60,
+    [int]$SoftThresholdTokens = 200000,
+    [int]$EscalateThresholdTokens = 240000,
+    [int]$HardThresholdTokens = 250000,
+
+    # Legacy compatibility params (kept to avoid breaking existing calls).
+    [string]$LogPath = "",
     [int]$MinPreTokens = 0,
-    [int]$StaleAfterSeconds = 90,
+    [int]$StaleAfterSeconds = 0,
     [int]$ProxyPort = 8787,
-    [switch]$AutoProbeWhenStale = $true,
-    [int]$ProbeTimeoutSeconds = 12,
-    [string]$ProbeModel = "gpt-5.4",
-    [string]$ProbeInput = "ping"
+    [switch]$AutoProbeWhenStale = $false
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($SoftThresholdTokens -gt $EscalateThresholdTokens -or $EscalateThresholdTokens -gt $HardThresholdTokens) {
+    throw "Invalid thresholds: require Soft <= Escalate <= Hard."
+}
 
 $statusLineScript = Join-Path $PSScriptRoot "context_guard_status_line.ps1"
 if (-not (Test-Path -LiteralPath $statusLineScript)) {
@@ -19,245 +27,230 @@ if (-not (Test-Path -LiteralPath $statusLineScript)) {
 }
 . $statusLineScript
 
-function Test-ProxyLocalRunning {
-    param([int]$Port)
+function Convert-ToNullableInt {
+    param($Value)
     try {
-        $healthUrl = "http://127.0.0.1:$Port/__guard/health"
-        $healthRaw = curl.exe -s $healthUrl
-        return -not [string]::IsNullOrWhiteSpace($healthRaw)
+        if ($null -eq $Value) {
+            return $null
+        }
+        $asText = [string]$Value
+        if ([string]::IsNullOrWhiteSpace($asText)) {
+            return $null
+        }
+        return [int]$Value
     } catch {
-        return $false
+        return $null
     }
 }
 
-function Invoke-ProxyProbe {
+function Get-RecentSessionFiles {
     param(
-        [int]$Port,
-        [int]$TimeoutSec,
-        [string]$Model,
-        [string]$InputText
+        [string]$Root,
+        [int]$Limit
     )
-    $probeUrl = "http://127.0.0.1:$Port/v1/responses"
-    $probeBody = @{
-        model = $Model
-        input = $InputText
-        max_output_tokens = 1
-        store = $false
-    } | ConvertTo-Json -Compress
-    try {
-        $null = Invoke-WebRequest -Uri $probeUrl -Method Post -ContentType "application/json" -Body $probeBody -TimeoutSec $TimeoutSec
-        return [pscustomobject]@{
-            Attempted = $true
-            Succeeded = $true
-            Error = $null
-        }
-    } catch {
-        return [pscustomobject]@{
-            Attempted = $true
-            Succeeded = $false
-            Error = $_.Exception.Message
+    $all = @()
+    $paths = @(
+        (Join-Path $Root "sessions"),
+        (Join-Path $Root "archived_sessions")
+    )
+
+    foreach ($p in $paths) {
+        if (Test-Path -LiteralPath $p) {
+            try {
+                $all += Get-ChildItem -Path $p -Recurse -File -Filter "*.jsonl" -ErrorAction SilentlyContinue
+            } catch {
+                # Ignore scan errors for one path and continue with others.
+            }
         }
     }
+
+    if ($all.Count -eq 0) {
+        return @()
+    }
+
+    return $all | Sort-Object LastWriteTime -Descending | Select-Object -First $Limit
 }
 
-function Get-LatestProxyMatch {
+function Get-LatestTokenEventFromFile {
     param(
         [string]$Path,
-        [int]$Tail,
-        [string]$Pattern,
-        [int]$MinimumPreTokens
+        [int]$Tail
     )
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return [pscustomobject]@{
-            Found = $false
-            Reason = "log_not_found"
-            Hit = $null
-        }
-    }
-
-    $lines = Get-Content -LiteralPath $Path -Tail $Tail
-    $hit = $null
-    $fallback = $null
-    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-        $m = [regex]::Match($lines[$i], $Pattern)
-        if ($m.Success) {
-            if ($null -eq $fallback) {
-                $fallback = $m
-            }
-            $preCandidate = [int]$m.Groups["pre"].Value
-            if ($preCandidate -ge $MinimumPreTokens) {
-                $hit = $m
-                break
-            }
-        }
-    }
-    if ($null -eq $hit -and $null -ne $fallback) {
-        $hit = $fallback
-    }
-    if ($null -eq $hit) {
-        return [pscustomobject]@{
-            Found = $false
-            Reason = "no_proxy_response_line_found"
-            Hit = $null
-        }
-    }
-    return [pscustomobject]@{
-        Found = $true
-        Reason = ""
-        Hit = $hit
-    }
-}
-
-function Get-AgeInfo {
-    param(
-        [System.Text.RegularExpressions.Match]$Match,
-        [int]$StaleSeconds
-    )
-    $ageSeconds = $null
-    $isStale = $false
+    $lines = @()
     try {
-        $ts = [datetimeoffset]::Parse($Match.Groups["ts"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
-        $ageSeconds = [int][math]::Max(0, [math]::Round(([datetimeoffset]::UtcNow - $ts).TotalSeconds))
-        if ($ageSeconds -gt $StaleSeconds) {
-            $isStale = $true
-        }
+        $lines = Get-Content -LiteralPath $Path -Tail $Tail -ErrorAction Stop
     } catch {
-        $isStale = $false
+        return $null
     }
+
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        $line = $lines[$i]
+        if (-not [regex]::IsMatch($line, '"type"\s*:\s*"token_count"')) {
+            continue
+        }
+
+        try {
+            $obj = $line | ConvertFrom-Json -ErrorAction Stop
+            $info = $obj.payload.info
+            if ($null -eq $info) {
+                continue
+            }
+
+            return [pscustomobject]@{
+                SessionFile = $Path
+                Timestamp = [string]$obj.timestamp
+                LastInputTokens = Convert-ToNullableInt $info.last_token_usage.input_tokens
+                LastOutputTokens = Convert-ToNullableInt $info.last_token_usage.output_tokens
+                TotalInputTokens = Convert-ToNullableInt $info.total_token_usage.input_tokens
+                TotalOutputTokens = Convert-ToNullableInt $info.total_token_usage.output_tokens
+                ModelContextWindow = Convert-ToNullableInt $info.model_context_window
+            }
+        } catch {
+            continue
+        }
+    }
+
+    return $null
+}
+
+function Resolve-GuardDecision {
+    param(
+        [Nullable[int]]$InputTokens,
+        [int]$SoftThreshold,
+        [int]$EscalateThreshold,
+        [int]$HardThreshold
+    )
+
+    if ($null -eq $InputTokens) {
+        return [pscustomobject]@{
+            Trigger = "inactive"
+            Mode = "N/A"
+            GuardState = "tắt"
+            GuardApplied = $false
+            SoftState = "chưa kích hoạt"
+            Reason = "input_unavailable"
+        }
+    }
+
+    if ($InputTokens -ge $HardThreshold) {
+        return [pscustomobject]@{
+            Trigger = "hard_active"
+            Mode = "Aggressive"
+            GuardState = "bật"
+            GuardApplied = $true
+            SoftState = "đã kích hoạt"
+            Reason = ">= hard threshold"
+        }
+    }
+
+    if ($InputTokens -ge $EscalateThreshold) {
+        return [pscustomobject]@{
+            Trigger = "soft_escalated"
+            Mode = "Balanced"
+            GuardState = "bật"
+            GuardApplied = $true
+            SoftState = "đã kích hoạt"
+            Reason = ">= escalate threshold"
+        }
+    }
+
+    if ($InputTokens -ge $SoftThreshold) {
+        return [pscustomobject]@{
+            Trigger = "soft_prepare"
+            Mode = "Balanced"
+            GuardState = "tắt"
+            GuardApplied = $false
+            SoftState = "đã kích hoạt"
+            Reason = ">= soft threshold (prepare)"
+        }
+    }
+
     return [pscustomobject]@{
-        AgeSeconds = $ageSeconds
-        IsStale = $isStale
+        Trigger = "inactive"
+        Mode = "N/A"
+        GuardState = "tắt"
+        GuardApplied = $false
+        SoftState = "chưa kích hoạt"
+        Reason = "< soft threshold"
     }
 }
 
-$pattern = '^(?<ts>\S+)\s+method=POST\s+path=/(?:v1/)?responses\s+trigger=(?<trigger>\S+)\s+mode=(?<mode>\S+)\s+applied=(?<applied>\S+)(?:\s+pre_chars=(?<prechars>\d+)\s+post_chars=(?<postchars>\d+))?\s+pre=(?<pre>\d+)\s+post=(?<post>\d+)\s+reduction_pct=(?<reduction>[\d.]+)(?:\s+model_in=(?<modelin>\S+)\s+model_out=(?<modelout>\S+)\s+resp_stream=(?<respstream>\S+)\s+usage_parse=(?<usageparse>\S+))?\s+parse_error=(?<parse>\S+)\s+duration_ms=(?<duration>\d+)'
-$proxyLocalRunning = Test-ProxyLocalRunning -Port $ProxyPort
-$proxyLocalState = if ($proxyLocalRunning) { "đang bật" } else { "đang tắt" }
-
-$probeAttempted = $false
-$probeSucceeded = $false
-$probeError = $null
-$lookup = Get-LatestProxyMatch -Path $LogPath -Tail $ScanTail -Pattern $pattern -MinimumPreTokens $MinPreTokens
-if (-not $lookup.Found -and $AutoProbeWhenStale -and $proxyLocalRunning) {
-    $probeResult = Invoke-ProxyProbe -Port $ProxyPort -TimeoutSec $ProbeTimeoutSeconds -Model $ProbeModel -InputText $ProbeInput
-    $probeAttempted = $probeResult.Attempted
-    $probeSucceeded = $probeResult.Succeeded
-    $probeError = $probeResult.Error
-    Start-Sleep -Milliseconds 350
-    $lookup = Get-LatestProxyMatch -Path $LogPath -Tail $ScanTail -Pattern $pattern -MinimumPreTokens $MinPreTokens
+$recentFiles = Get-RecentSessionFiles -Root $CodexRoot -Limit $MaxRecentFiles
+$latestEvent = $null
+foreach ($f in $recentFiles) {
+    $candidate = Get-LatestTokenEventFromFile -Path $f.FullName -Tail $ScanTail
+    if ($null -ne $candidate) {
+        $latestEvent = $candidate
+        break
+    }
 }
 
-if (-not $lookup.Found) {
+if ($null -eq $latestEvent) {
     $statusLine = New-ContextGuardStatusLine `
-        -ProxyLocalState $proxyLocalState `
         -GuardContextState "tắt" `
         -Mode "N/A" `
         -ProxyInputTokens $null `
         -ProxyOutputTokens $null `
         -SoftTriggerState "chưa kích hoạt"
+
     [pscustomobject]@{
         Found = $false
-        Reason = $lookup.Reason
-        LogPath = $LogPath
+        Reason = "token_count_not_found"
+        Source = "codex_session_token_count"
+        CodexRoot = $CodexRoot
         ScanTail = $ScanTail
-        MinPreTokens = $MinPreTokens
-        StaleAfterSeconds = $StaleAfterSeconds
-        ProxyPort = $ProxyPort
-        ProxyLocalRunning = $proxyLocalRunning
-        ProxyLocalState = $proxyLocalState
-        ProbeAttempted = $probeAttempted
-        ProbeSucceeded = $probeSucceeded
-        ProbeError = $probeError
-        StatusFormatVersion = "v1"
+        MaxRecentFiles = $MaxRecentFiles
+        ProxyInputTokensEstimate = $null
+        ProxyOutputTokensEstimate = $null
+        Trigger = "inactive"
+        Mode = "N/A"
+        Applied = $false
+        StatusFormatVersion = "v2"
         StatusLine = $statusLine
     }
     exit 0
 }
 
-$hit = $lookup.Hit
-$ageInfo = Get-AgeInfo -Match $hit -StaleSeconds $StaleAfterSeconds
-$ageSeconds = $ageInfo.AgeSeconds
-$isStale = $ageInfo.IsStale
+$decision = Resolve-GuardDecision `
+    -InputTokens $latestEvent.LastInputTokens `
+    -SoftThreshold $SoftThresholdTokens `
+    -EscalateThreshold $EscalateThresholdTokens `
+    -HardThreshold $HardThresholdTokens
 
-if ($isStale -and $AutoProbeWhenStale -and $proxyLocalRunning) {
-    $probeResult = Invoke-ProxyProbe -Port $ProxyPort -TimeoutSec $ProbeTimeoutSeconds -Model $ProbeModel -InputText $ProbeInput
-    $probeAttempted = $probeResult.Attempted
-    $probeSucceeded = $probeResult.Succeeded
-    $probeError = $probeResult.Error
-    Start-Sleep -Milliseconds 350
-    $lookupAfterProbe = Get-LatestProxyMatch -Path $LogPath -Tail $ScanTail -Pattern $pattern -MinimumPreTokens $MinPreTokens
-    if ($lookupAfterProbe.Found) {
-        $hit = $lookupAfterProbe.Hit
-        $ageInfo = Get-AgeInfo -Match $hit -StaleSeconds $StaleAfterSeconds
-        $ageSeconds = $ageInfo.AgeSeconds
-        $isStale = $ageInfo.IsStale
-    }
-}
-
-$pre = [int]$hit.Groups["pre"].Value
-$post = [int]$hit.Groups["post"].Value
-$trigger = $hit.Groups["trigger"].Value
-$mode = $hit.Groups["mode"].Value
-$applied = ($hit.Groups["applied"].Value -eq "true")
-$reduction = [double]$hit.Groups["reduction"].Value
-$modelInRaw = $hit.Groups["modelin"].Value
-$modelOutRaw = $hit.Groups["modelout"].Value
-$modelIn = if ([string]::IsNullOrWhiteSpace($modelInRaw) -or $modelInRaw -eq "na") { $null } else { [int]$modelInRaw }
-$modelOut = if ([string]::IsNullOrWhiteSpace($modelOutRaw) -or $modelOutRaw -eq "na") { $null } else { [int]$modelOutRaw }
-$responseStreamed = $hit.Groups["respstream"].Value
-$usageParse = $hit.Groups["usageparse"].Value
-
-$softState = if ($trigger -eq "inactive") { "chưa kích hoạt" } else { "đã kích hoạt" }
-$guardState = if ($applied) { "bật" } else { "tắt" }
-
-if ($isStale) {
-    $statusLine = New-ContextGuardStatusLine `
-        -ProxyLocalState $proxyLocalState `
-        -GuardContextState "tắt" `
-        -Mode "N/A" `
-        -ProxyInputTokens $null `
-        -ProxyOutputTokens $null `
-        -SoftTriggerState "chưa kích hoạt" `
-        -IsStale $true `
-        -AgeSeconds $ageSeconds
-} else {
-    $statusLine = New-ContextGuardStatusLine `
-        -ProxyLocalState $proxyLocalState `
-        -GuardContextState $guardState `
-        -Mode $mode `
-        -ProxyInputTokens $pre `
-        -ProxyOutputTokens $post `
-        -SoftTriggerState $softState `
-        -IsStale $false `
-        -AgeSeconds $ageSeconds
-}
+$statusLine = New-ContextGuardStatusLine `
+    -GuardContextState $decision.GuardState `
+    -Mode $decision.Mode `
+    -ProxyInputTokens $latestEvent.LastInputTokens `
+    -ProxyOutputTokens $latestEvent.LastOutputTokens `
+    -SoftTriggerState $decision.SoftState
 
 [pscustomobject]@{
     Found = $true
-    TimestampUtc = $hit.Groups["ts"].Value
-    Trigger = $trigger
-    Mode = $mode
-    Applied = $applied
-    ProxyInputTokensEstimate = $pre
-    ProxyOutputTokensEstimate = $post
-    ModelInputTokens = $modelIn
-    ModelOutputTokens = $modelOut
-    ResponseStreamed = if ([string]::IsNullOrWhiteSpace($responseStreamed)) { "unknown" } else { $responseStreamed }
-    UsageParse = if ([string]::IsNullOrWhiteSpace($usageParse)) { "unknown" } else { $usageParse }
-    ReductionPct = $reduction
-    ParseError = $hit.Groups["parse"].Value
-    DurationMs = [int]$hit.Groups["duration"].Value
-    LogPath = (Resolve-Path -LiteralPath $LogPath).Path
-    MinPreTokens = $MinPreTokens
-    StaleAfterSeconds = $StaleAfterSeconds
-    AgeSeconds = $ageSeconds
-    IsStale = $isStale
-    ProxyPort = $ProxyPort
-    ProxyLocalRunning = $proxyLocalRunning
-    ProxyLocalState = $proxyLocalState
-    ProbeAttempted = $probeAttempted
-    ProbeSucceeded = $probeSucceeded
-    ProbeError = $probeError
-    StatusFormatVersion = "v1"
+    Reason = "ok"
+    Source = "codex_session_token_count"
+    SessionFile = $latestEvent.SessionFile
+    TimestampUtc = $latestEvent.Timestamp
+    Trigger = $decision.Trigger
+    Mode = $decision.Mode
+    Applied = $decision.GuardApplied
+    DecisionReason = $decision.Reason
+    ProxyInputTokensEstimate = $latestEvent.LastInputTokens
+    ProxyOutputTokensEstimate = $latestEvent.LastOutputTokens
+    ModelInputTokens = $latestEvent.LastInputTokens
+    ModelOutputTokens = $latestEvent.LastOutputTokens
+    TotalInputTokens = $latestEvent.TotalInputTokens
+    TotalOutputTokens = $latestEvent.TotalOutputTokens
+    ModelContextWindow = $latestEvent.ModelContextWindow
+    CodexRoot = $CodexRoot
+    ScanTail = $ScanTail
+    MaxRecentFiles = $MaxRecentFiles
+    SoftThresholdTokens = $SoftThresholdTokens
+    EscalateThresholdTokens = $EscalateThresholdTokens
+    HardThresholdTokens = $HardThresholdTokens
+    IsStale = $false
+    ProbeAttempted = $false
+    ProbeSucceeded = $false
+    ProbeError = $null
+    StatusFormatVersion = "v2"
     StatusLine = $statusLine
 }
