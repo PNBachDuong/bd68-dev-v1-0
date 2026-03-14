@@ -142,78 +142,11 @@ function Ensure-UserPathContains {
     return $true
 }
 
-function Install-VfsBinaryFromRelease {
-    param([string]$BinDirectory)
-
-    Ensure-Directory -Path $BinDirectory
-
-    $releaseUrl = "https://api.github.com/repos/TrNgTien/vfs/releases/latest"
-    $headers = @{ "User-Agent" = "bd68-dev-installer-v1.1" }
-    try {
-        $release = Invoke-RestMethod -Method Get -Uri $releaseUrl -Headers $headers -TimeoutSec 30
-    } catch {
-        throw "Failed to query vfs release metadata. $($_.Exception.Message)"
-    }
-
-    $assets = @($release.assets)
-    if ($assets.Count -eq 0) {
-        throw "vfs release metadata does not contain downloadable assets."
-    }
-
-    $asset = $assets |
-        Where-Object {
-            $_.name -match '(?i)vfs' -and
-            $_.name -match '(?i)(windows|win)' -and
-            $_.name -match '(?i)(amd64|x86_64|x64|64)' -and
-            ($_.name -match '(?i)\.exe$' -or $_.name -match '(?i)\.zip$')
-        } |
-        Select-Object -First 1
-    if ($null -eq $asset) {
-        throw "Could not find a Windows x64 vfs asset in the latest release."
-    }
-
-    $tag = if ([string]::IsNullOrWhiteSpace($release.tag_name)) { "latest" } else { $release.tag_name.TrimStart("v") }
-    $versionedPath = Join-Path $BinDirectory ("vfs-{0}.exe" -f $tag)
-    $canonicalPath = Join-Path $BinDirectory "vfs.exe"
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("bd68-vfs-" + [guid]::NewGuid().ToString("N"))
-    Ensure-Directory -Path $tempRoot
-
-    try {
-        if ($asset.name -match '(?i)\.exe$') {
-            $tmpExe = Join-Path $tempRoot $asset.name
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tmpExe -TimeoutSec 120 | Out-Null
-            Copy-Item -LiteralPath $tmpExe -Destination $versionedPath -Force
-        } else {
-            $tmpZip = Join-Path $tempRoot $asset.name
-            $extractDir = Join-Path $tempRoot "extract"
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tmpZip -TimeoutSec 120 | Out-Null
-            Expand-Archive -Path $tmpZip -DestinationPath $extractDir -Force
-            $exe = Get-ChildItem -Path $extractDir -Recurse -File -Filter "vfs*.exe" | Select-Object -First 1
-            if ($null -eq $exe) {
-                throw "Downloaded vfs archive does not contain a vfs executable."
-            }
-            Copy-Item -LiteralPath $exe.FullName -Destination $versionedPath -Force
-        }
-        Copy-Item -LiteralPath $versionedPath -Destination $canonicalPath -Force
-    } finally {
-        Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    return [pscustomobject]@{
-        VersionedPath = $versionedPath
-        CanonicalPath = $canonicalPath
-        ReleaseTag = $release.tag_name
-    }
-}
-
 function Install-McpBinariesForCodex {
     $result = [ordered]@{
         MemoryAiPath = ""
         ChubPath = ""
-        VfsPath = ""
         InstalledPackages = @()
-        UserPathUpdated = $false
-        VfsInstalledFromRelease = $false
     }
 
     $npmPath = Find-CommandPath @("npm", "npm.cmd")
@@ -242,27 +175,6 @@ function Install-McpBinariesForCodex {
         $result.InstalledPackages += "@aisuite/chub"
     }
     $result.ChubPath = $chubPath
-
-    $vfsPath = Find-CommandPath @("vfs", "vfs.exe")
-    if ([string]::IsNullOrWhiteSpace($vfsPath)) {
-        $localBin = Join-Path $HOME ".local\bin"
-        $localVfs = @()
-        if (Test-Path -LiteralPath $localBin) {
-            $localVfs = @(Get-ChildItem -LiteralPath $localBin -File -Filter "vfs*.exe" | Sort-Object LastWriteTime -Descending)
-        }
-        if ($localVfs.Count -gt 0) {
-            $vfsPath = $localVfs[0].FullName
-        } else {
-            $releaseInstall = Install-VfsBinaryFromRelease -BinDirectory $localBin
-            $result.VfsInstalledFromRelease = $true
-            $result.UserPathUpdated = Ensure-UserPathContains -Directory $localBin
-            $vfsPath = $releaseInstall.CanonicalPath
-        }
-    }
-    if ([string]::IsNullOrWhiteSpace($vfsPath)) {
-        throw "vfs binary could not be resolved after installation attempt."
-    }
-    $result.VfsPath = $vfsPath
 
     return [pscustomobject]$result
 }
@@ -496,14 +408,11 @@ if ($Target -eq "codex") {
             Write-Host "MCP binary install: completed"
             Write-Host "MCP memoryai path: $($mcpInstallResult.MemoryAiPath)"
             Write-Host "MCP chub path: $($mcpInstallResult.ChubPath)"
-            Write-Host "MCP vfs path: $($mcpInstallResult.VfsPath)"
             if ($mcpInstallResult.InstalledPackages.Count -gt 0) {
                 Write-Host "MCP npm packages installed: $($mcpInstallResult.InstalledPackages -join ', ')"
             } else {
                 Write-Host "MCP npm packages installed: none (already present)"
             }
-            Write-Host "MCP vfs installed from release: $($mcpInstallResult.VfsInstalledFromRelease)"
-            Write-Host "MCP user PATH updated: $($mcpInstallResult.UserPathUpdated)"
         } else {
             Write-Host "MCP binary install: warning (continued due FailOnMcpInstallError=false)"
         }

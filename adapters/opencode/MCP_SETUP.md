@@ -3,7 +3,7 @@
 The portable profile assumes these tools if your OpenCode environment exposes them:
 - `memoryai`
 - `chub`
-- `vfs`
+- `serena` (recommended for local code retrieval/edit)
 
 If OpenCode is connected to the same MCP stack as Codex:
 - keep the tool names the same

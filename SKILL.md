@@ -32,16 +32,15 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - When the pack already contains a curated local reference for the current task, read that local reference first and treat it as a valid retrieval source with provenance.
 - Use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - If `chub` has no actionable entry or lacks required version-specific detail, use Context7 as fallback/accelerator (`resolve-library-id` -> `query-docs`).
-- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for the session and continue with `chub`/`Context7`/`vfs`.
+- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for the session and continue with `chub`/`Context7`.
 - If retrieval does not provide verifiable evidence for a technical claim, return `không đủ dữ liệu` instead of guessing.
-- Use `vfs` before `rg`, `grep`, or broad file reads for local code structure, declarations, signatures, classes, methods, and types.
+- Use targeted `rg`/`grep` and focused file reads for local code discovery, declarations, and implementation checks.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
 - Only go back to GitHub, web, or broader lookup when the local curated reference is missing, insufficient, or clearly out of scope.
 - Retrieval loop guard:
-  - Never repeat an identical `vfs` call (same path and same pattern/query) within the same turn or subtask.
-  - Default `vfs` budget per subtask: one discovery call plus one refinement call.
-  - If `vfs` returns empty, unchanged, or non-actionable results twice, stop `vfs` and switch to targeted `rg` or file reads.
-  - Skip `vfs` for non-structure tasks such as policy discussion, debugging tool behavior, token-cost reporting, or status summaries.
+  - Never repeat an identical retrieval call (same tool and same query) within the same turn or subtask.
+  - Default retrieval budget per subtask: one discovery call plus one refinement call.
+  - If retrieval returns empty, unchanged, or non-actionable results twice, stop repeating and switch to focused file reads.
 ## MemoryAI Guardrails
 - Treat repeated `memory_bootstrap` in one thread as a warning sign for token waste.
 - Do not call `memory_store` or similar write tools just to restate an already-known preference; recall first.
@@ -53,8 +52,8 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 ## Context Hygiene
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates too much stale context.
 - Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
-- Use `vfs` first when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
-- Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
+- Use targeted search and focused reads when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
+- Do not allow retrieval loops: if the same query was already attempted and no new signal exists, do not call it again.
 - In memory-degraded mode, do not infer from old memory context; rely only on current-session evidence and retrieval outputs.
 
 ## Codex Thread Payload Hygiene
@@ -67,7 +66,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Use a sliding-window dialog history plus a compact summary for older turns.
 - Runtime option: run `scripts/context_guard_thread.js` and route `llmgate` through local thread `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
-- MCPs: `memoryai`, `chub`, `vfs`.
+- MCPs: `memoryai`, `chub`, `context7`, `serena`.
 - Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
 - Local code retrieval/edit: `serena` is preferred once onboarded.
 - Workflow orchestration: gstack-lite gates only (`product-gate`, `engineering-gate`, `ship-gate`), not always-on.
@@ -137,30 +136,10 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - When an approved GitHub sync happens, add a matching entry to the repo copy of `UPDATE_LOG.md` and include the commit id after the push.
 - Keep each entry short and factual: date, scope, summary, files, notes.
 
-## VFS Turn Report
-On any assistant turn where `vfs` is called, append exactly:
-```text
-Mức sử dụng MCP: thấp/vừa/cao | Tên MCP đã gọi: <name của mcp>
-VFS: bật/tắt | tối ưu: ...%
-```
-- If exact optimization percent is unavailable for that turn, explicitly mark estimate, for example:
-  - `VFS: bật | tối ưu: ~...% (ước tính)`
-  - or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`
-- Never fill a fake exact percentage.
-## Guard Context Always-Visible
-On every assistant turn, append:
-```text
-<StatusLine from scripts/context_guard_thread_metrics.ps1>
-<SkillGateLine from scripts/context_guard_thread_metrics.ps1>
-```
-- Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
-- For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.
-- Soft trigger policy:
-  - `< 200,000`: monitor only.
-  - `>= 200,000`: soft trigger on, prepare `Balanced` for the next heavy turn.
-  - `>= 240,000`: apply `Balanced` now and recommend handoff.
-  - `>= 250,000`: apply `Aggressive` and move to a new thread quickly.
-- If Codex token telemetry is unavailable, set `Input/Output: N/A` and label source as unavailable.
+## Guard Context Reporting (On-Demand)
+- Do not append `StatusLine` or `SkillGateLine` by default on every turn.
+- Show Guard status lines only when the user explicitly asks for Guard metrics/debug.
+- For payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text
@@ -168,8 +147,6 @@ MCP overhead token: thấp/vừa/cao
 Token Input: ...
 Token Output: ...
 Tổng phí USD: ...
-VFS tiết kiệm: ... token
-VFS giảm: ...% khi không sử dụng
 Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual
 Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
 ```
@@ -184,10 +161,6 @@ Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
   - `(input_tokens * 2.50 + output_tokens * 15.00 + cache_read_tokens * 14.85 + cache_write_tokens * 14.85) / 1_000_000`
 - If exact usage is available, use the exact values.
 - If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision.
-- VFS reporting rules:
-  - If an exact `vfs bench` result exists for the current task, use its saved-token and reduction-percent values.
-  - If only `vfs stats` or a previous benchmark exists, report a clearly labeled estimate.
-  - If VFS was not used in the task, set `VFS tiết kiệm: 0 token` and `VFS giảm: 0% khi không sử dụng`.
 - Guard Context reporting rules:
   - If payload guard was applied in the current task, report actual mode (`Safe/Balanced/Aggressive`) and measured reduction.
   - If payload guard was not applied, set `Guard Context: tắt | chế độ: N/A | đường chạy: N/A`.

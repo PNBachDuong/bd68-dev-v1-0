@@ -17,14 +17,13 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - If `chub` has no actionable entry or lacks required version-specific detail, use Context7 as fallback/accelerator (`resolve-library-id` then `query-docs`).
 - If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
-- If the environment provides `vfs`, use `vfs` before `rg`, `grep`, or broad read-all file inspection when the goal is local code structure discovery.
+- Use targeted `rg`/`grep` and focused file reads for local code discovery.
 - Use raw text search only for bodies, strings, config keys, JSON, CSS, Markdown, or other literal text search.
 - Only go back to GitHub or broader external lookup when the local curated reference is missing or insufficient.
 - Retrieval loop guard:
-  - Never repeat an identical `vfs` call (same path and same pattern/query) within the same turn or subtask.
-  - Default `vfs` budget per subtask: one discovery call plus one refinement call.
-  - If `vfs` returns empty, unchanged, or non-actionable results twice, stop `vfs` and switch to targeted `rg` or file reads.
-  - Skip `vfs` for non-structure tasks such as policy discussion, debugging tool behavior, token-cost reporting, or status summaries.
+  - Never repeat an identical retrieval call (same tool and same query) within the same turn or subtask.
+  - Default retrieval budget per subtask: one discovery call plus one refinement call.
+  - If retrieval returns empty, unchanged, or non-actionable results twice, stop repeating and switch to focused file reads.
 ## Memory Guardrails
 - Do not repeat `memory_bootstrap` in the same session unless the user explicitly asks for a reset-style re-bootstrap.
 - Do not write memory just to restate a known preference.
@@ -36,7 +35,7 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
 - Keep retrieval narrow and current-task-specific.
 - Prefer a clean handoff to a new thread over trying to rescue a saturated thread.
-- Do not allow retrieval loops: if the same `vfs` query was already attempted and no new signal exists, do not call it again.
+- Do not allow retrieval loops: if the same query was already attempted and no new signal exists, do not call it again.
 
 ## Codex Thread Payload Hygiene
 - Treat sudden thread token growth as a reliability bug, not only a pricing issue.
@@ -96,23 +95,10 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
   - If compression drops critical facts, roll back compression first.
   - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
-## VFS Turn Report
-- On any assistant turn where `vfs` is called, append:
-  - `Mức sử dụng MCP: thấp/vừa/cao | Tên MCP đã gọi: <name của mcp>`
-  - `VFS: bật/tắt | tối ưu: ...%`
-- If exact optimization percent is unavailable, explicitly mark estimate (ước tính), for example: `VFS: bật | tối ưu: ~...% (ước tính)` or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`.
-## Guard Context Always-Visible
-- On every assistant turn, append:
-  - `StatusLine` from `scripts/context_guard_thread_metrics.ps1`
-  - `SkillGateLine` from `scripts/context_guard_thread_metrics.ps1`
-- Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
-- For real payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
-- Soft trigger policy:
-  - `< 200,000`: monitor only.
-  - `>= 200,000`: soft trigger on, prepare `Balanced` for the next heavy turn.
-  - `>= 240,000`: apply `Balanced` now and recommend handoff.
-  - `>= 250,000`: apply `Aggressive` and hand off quickly.
-- If Codex token telemetry is unavailable, set `Input/Output: N/A` and label source as unavailable.
+## Guard Context Reporting (On-Demand)
+- Do not append status lines by default on every turn.
+- Show `StatusLine` and `SkillGateLine` only when the user explicitly asks for Guard metrics or debug output.
+- For payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
