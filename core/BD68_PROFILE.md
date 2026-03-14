@@ -86,10 +86,6 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
   - If compression drops critical facts, roll back compression first.
   - If persisted memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
-## Guard Context Reporting (On-Demand)
-- Do not append status lines by default on every turn.
-- Show `StatusLine` and `SkillGateLine` only when the user explicitly asks for Guard metrics or debug output.
-- For payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.

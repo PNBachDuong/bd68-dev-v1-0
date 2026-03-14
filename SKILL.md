@@ -122,10 +122,6 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - When an approved GitHub sync happens, add a matching entry to the repo copy of `UPDATE_LOG.md` and include the commit id after the push.
 - Keep each entry short and factual: date, scope, summary, files, notes.
 
-## Guard Context Reporting (On-Demand)
-- Do not append `StatusLine` or `SkillGateLine` by default on every turn.
-- Show Guard status lines only when the user explicitly asks for Guard metrics/debug.
-- For payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.
 ## Chat Cost Summary
 Output exactly this block when the user asks to close the chat or requests token cost:
 ```text

@@ -1,7 +1,6 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [ValidateSet("opencode", "codex")]
-    [string]$Target,
+    [ValidateSet("", "opencode", "codex")]
+    [string]$Target = "",
 
     [ValidateSet("global")]
     [string]$Scope = "global",
@@ -10,17 +9,21 @@ param(
 
     [string]$OpenCodeRootPath = "",
 
-    [bool]$EnableProxy = $true,
+    [bool]$EnableProxy = $false,
 
-    [bool]$StartProxyNow = $true,
+    [bool]$StartProxyNow = $false,
 
-    [bool]$RegisterProxyStartup = $true,
+    [bool]$RegisterProxyStartup = $false,
 
     [bool]$InstallMcpBinaries = $true,
 
     [bool]$FailOnMcpInstallError = $true,
 
-    [string]$ProxyBaseUrl = "http://127.0.0.1:8787"
+    [string]$ProxyBaseUrl = "http://127.0.0.1:8787",
+
+    [switch]$InitProject = $false,
+
+    [string]$ProjectName = ""
 )
 
 Set-StrictMode -Version Latest
@@ -32,6 +35,9 @@ if ([string]::IsNullOrWhiteSpace($CodexRootPath)) {
 }
 if ([string]::IsNullOrWhiteSpace($OpenCodeRootPath)) {
     $OpenCodeRootPath = Join-Path $HOME ".config\opencode"
+}
+if ([string]::IsNullOrWhiteSpace($Target) -and -not $InitProject) {
+    throw "Target is required unless -InitProject is set."
 }
 
 function Ensure-Directory {
@@ -319,7 +325,6 @@ if ($Target -eq "opencode") {
     Write-Host "References archive: $refRoot"
     Write-Host "Pack source: core/ + adapters/opencode/"
     Write-Host "Open a new OpenCode session to load the updated profile."
-    exit 0
 }
 
 if ($Target -eq "codex") {
@@ -430,5 +435,44 @@ if ($Target -eq "codex") {
         Write-Host "Thread health check: skipped"
     }
     Write-Host "Open a new Codex thread (or restart app) to ensure runtime picks up the updated base_url/profile."
-    exit 0
 }
+
+# -- Init Project Overlay --------------------------------------
+if ($InitProject) {
+    $overlayDir = Join-Path (Get-Location) ".bd68"
+    $templateSrc = Join-Path $PSScriptRoot "..\templates\PROJECT.md"
+
+    if (-not (Test-Path $overlayDir)) {
+        New-Item -ItemType Directory -Path $overlayDir | Out-Null
+        Write-Host "[BD68] Created .bd68/ overlay directory" -ForegroundColor Green
+    } else {
+        Write-Host "[BD68] .bd68/ already exists - skipping mkdir" -ForegroundColor Yellow
+    }
+
+    $destFile = Join-Path $overlayDir "PROJECT.md"
+    if (-not (Test-Path $destFile)) {
+        Copy-Item $templateSrc $destFile
+        # Inject project name if provided
+        if ($ProjectName -ne "") {
+            (Get-Content $destFile) -replace 'project: ""', "project: `"$ProjectName`"" |
+                Set-Content $destFile
+        }
+        # Inject today's date
+        $today = Get-Date -Format "yyyy-MM-dd"
+        (Get-Content $destFile) -replace 'last_updated: ""', "last_updated: `"$today`"" |
+            Set-Content $destFile
+        Write-Host "[BD68] PROJECT.md created at $destFile" -ForegroundColor Green
+        Write-Host "[BD68] Open .bd68/PROJECT.md and fill in your stack + decisions" -ForegroundColor Cyan
+    } else {
+        Write-Host "[BD68] PROJECT.md already exists - skipping (use -Force to overwrite)" -ForegroundColor Yellow
+    }
+
+    # Copy gitignore template as advisory
+    $gitignoreSrc = Join-Path $PSScriptRoot "..\templates\.gitignore.project"
+    $gitignoreDest = Join-Path $overlayDir ".gitignore.template"
+    if (-not (Test-Path $gitignoreDest)) {
+        Copy-Item $gitignoreSrc $gitignoreDest
+        Write-Host "[BD68] .gitignore.template copied - see file for git tracking options" -ForegroundColor Cyan
+    }
+}
+

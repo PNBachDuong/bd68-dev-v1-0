@@ -2,6 +2,55 @@
 
 Track every approved change to the installed Codex skill and every approved GitHub sync for `BD68 Dev v1.1`.
 
+## v1.4 — Safe Default: Direct Runtime (Proxy Off)
+Date: 2026-03-15
+
+### Changed
+- `scripts/install-agent-pack.ps1`: đổi default `EnableProxy`, `StartProxyNow`, `RegisterProxyStartup` sang `$false`
+- `README.md`: cập nhật hướng dẫn cờ proxy theo cơ chế opt-in (`:$true` khi muốn bật thread route)
+
+### Result
+- Cài đặt mặc định không còn tự đổi `llmgate` sang `127.0.0.1:8787`
+- Không còn tự tạo startup launcher thread trừ khi user bật explicit
+
+### Not changed
+- Luồng bật thread/proxy vẫn khả dụng khi user chủ động bật bằng flags
+## v1.3 — Skill & MCP Installation Policy
+Date: 2026-03-15
+
+### Added
+- Installation policy block trong tất cả 3 adapter templates
+- Codex sẽ confirm target trước khi cài bất kỳ skill/MCP nào
+- Remind sync source kit sau install global
+
+### Changed
+- adapters/codex/AGENTS.bootstrap.template
+- adapters/opencode/AGENTS.md.template
+- adapters/opencode/AGENTS.singlefile.template
+
+### Not changed
+- Tất cả files còn lại giữ nguyên
+
+## v1.2 — Project Overlay System
+Date: 2026-03-15
+
+### Added
+- `templates/PROJECT.md` — per-project overlay template
+- `templates/.gitignore.project` — gitignore advisory cho overlay
+- `scripts/install-agent-pack.ps1 -InitProject` flag — khởi tạo overlay trong project mới
+- `scripts/install-agent-pack.ps1 -ProjectName` flag — inject tên project vào template
+- Project overlay loader instructions trong tất cả adapters (codex, opencode x2)
+- README section: "Project Overlay (Multi-Project Support)"
+
+### Changed
+- `adapters/codex/AGENTS.bootstrap.template` — thêm overlay loader block
+- `adapters/opencode/AGENTS.md.template` — thêm overlay loader block
+- `adapters/opencode/AGENTS.singlefile.template` — thêm overlay loader block
+
+### Not changed
+- Global profile, references, scripts hiện có — giữ nguyên 100%
+- Backward compatible: projects không có .bd68/ tiếp tục hoạt động bình thường
+
 ## Format
 - Date: local date in Asia/Bangkok
 - Scope: `codex`, `github`, or `codex+github`
@@ -75,4 +124,9 @@ Track every approved change to the installed Codex skill and every approved GitH
 | 2026-03-15 | github | Synced status-line-off policy and VFS removal from active kit flow to GitHub. | `README.md`, `SKILL.md`, `UPDATE_LOG.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `adapters/opencode/MCP_SETUP.md`, `scripts/install-agent-pack.ps1` | Commit `c563d14`. |
 | 2026-03-15 | codex | Removed MemoryAI from active BD68 kit policy and installer flow (matching prior VFS removal direction). | `AGENTS.md`, `README.md`, `SKILL.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `adapters/opencode/AGENTS.md.template`, `adapters/opencode/MCP_SETUP.md`, `scripts/install-agent-pack.ps1`, `UPDATE_LOG.md` | Active retrieval flow is now `chub` + `Context7` fallback + `serena` for local code. |
 | 2026-03-15 | github | Synced MemoryAI removal from active kit policy/install flow to GitHub. | `README.md`, `SKILL.md`, `UPDATE_LOG.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `adapters/opencode/AGENTS.md.template`, `adapters/opencode/MCP_SETUP.md`, `scripts/install-agent-pack.ps1` | Commit `7636b83`. |
+| 2026-03-15 | codex | Removed status-line directives from active policy/templates (no `StatusLine`/`SkillGateLine` instruction in runtime guidance). | `AGENTS.md`, `SKILL.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `UPDATE_LOG.md` | Keeps Guard Context summary behavior, but stops status-line policy prompts. |
+
+
+
+
 

@@ -1,0 +1,12 @@
+# BD68 Project Overlay — gitignore template
+# Copy file này vào root của project khi init overlay
+#
+# Chọn 1 trong 2 option:
+#
+# OPTION A: Overlay là private (không commit lên git)
+# Uncomment dòng dưới:
+# .bd68/
+#
+# OPTION B: Overlay commit cùng repo (team dùng chung)
+# Giữ nguyên (không uncomment gì)
+# .bd68/ sẽ được track bởi git

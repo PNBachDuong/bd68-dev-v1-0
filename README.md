@@ -47,6 +47,30 @@ This repo is now organized as an IDE-agnostic pack:
 - keep the short GPT-5.4 token cost summary behavior available
 - make the BD68 profile portable without requiring non-Codex IDEs to inspect `.codex`
 
+## Project Overlay (Multi-Project Support)
+
+BD68 Dev hỗ trợ nhiều project song song thông qua per-project overlay files.
+
+### Setup project mới
+```powershell
+# Trong thư mục project:
+powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -InitProject -ProjectName "my-project"
+```
+
+Lệnh này tạo `.bd68/PROJECT.md` trong thư mục hiện tại từ template.
+
+### Cách hoạt động
+- Global profile (`~/.codex/skills/bd_dev_kit/core/BD68_PROFILE.md`) load trước — áp dụng cho mọi project
+- Project overlay (`.bd68/PROJECT.md`) load sau — override global nơi cần thiết
+- Agent tự detect overlay khi session bắt đầu
+
+### Git tracking
+- Commit `.bd68/PROJECT.md` nếu cả team cần dùng chung overlay
+- Thêm `.bd68/` vào `.gitignore` nếu overlay là cấu hình cá nhân
+
+### Template
+Xem `templates/PROJECT.md` để hiểu các sections có sẵn.
+
 ## 5-Skill Add-on Default
 - Priority order: `giam ao giac -> toi uu ngu canh -> giam token`.
 - Do not run all 5 skills all-ways-on.
@@ -80,10 +104,10 @@ What it does:
 - syncs this pack into `C:\Users\<user>\.codex\skills\bd_dev_kit`
 - injects/updates a marked bootstrap block in `C:\Users\<user>\.codex\AGENTS.md`
 - auto-installs MCP binaries for `chub` (best effort, with explicit status output)
-- sets thread runtime base URL to `http://127.0.0.1:8787` under `[model_providers.llmgate]`
+- keeps direct llmgate route by default (no thread/proxy auto-enable)
 - creates `config.toml` or missing llmgate section automatically if not present
 - creates a backup when `config.toml` already exists
-- optionally registers a startup launcher and can start thread route immediately
+- can optionally enable thread route, startup launcher, and immediate health check when explicitly requested
 
 Requirement:
 - target machine needs internet access
@@ -91,11 +115,12 @@ Requirement:
 - if MCP install fails and you still want profile/thread setup only, use `-FailOnMcpInstallError:$false`
 
 Useful optional flags:
-- `-EnableProxy:$false` to install profile only, without proxy config changes
+- `-EnableProxy:$true` to switch to local thread route (`http://127.0.0.1:8787`)
 - `-InstallMcpBinaries:$false` to skip MCP binary installation
 - `-FailOnMcpInstallError:$false` to continue install even if MCP installation fails
-- `-RegisterProxyStartup:$false` to skip startup launcher creation
-- `-StartProxyNow:$false` to skip immediate proxy start/health wait
+- `-RegisterProxyStartup:$true` to create startup launcher for thread route
+- `-StartProxyNow:$true` to start thread route immediately and run health check
 - `-CodexRootPath <path>` to test against a custom clean directory
 
 After the command completes, open a new Codex thread (or restart app) to ensure runtime picks up the updated profile and thread route.
+

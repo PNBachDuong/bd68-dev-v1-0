@@ -85,10 +85,6 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
   - If compression drops critical facts, roll back compression first.
   - If persisted memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
-## Guard Context Reporting (On-Demand)
-- Do not append status lines by default on every turn.
-- Show `StatusLine` and `SkillGateLine` only when the user explicitly asks for Guard metrics or debug output.
-- For payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 ## Output Expectations
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
@@ -97,6 +93,37 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
   - `Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual`
   - `Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính`
 
+## Project Overlay
+At session start, check if `.bd68/PROJECT.md` exists in the current working directory.
+If it exists:
+  - Load it AFTER BD68_PROFILE
+  - Values in PROJECT.md override global profile where specified
+  - `docs:` entries define preferred retrieval sources for this project
+  - `locked:` entries are architecture decisions — never suggest changing them
+  - `never:` entries are hard constraints — never violate them
+  - `active_context:` gives current milestone and focus — use to prioritize responses
+If it does not exist, proceed with global BD68_PROFILE only.
 
+## Skill & MCP Installation Policy
+When user requests adding a new skill, MCP, or any installable component:
 
+STEP 1 — Confirm target before acting:
+  Ask: "Cài global (mọi project dùng) hay chỉ project này?"
+  Default nếu user không nói rõ: global → ~/.codex/skills/<skill-name>/
+
+STEP 2 — Install theo target:
+  Global skill:        ~/.codex/skills/<skill-name>/SKILL.md
+  Global MCP:          ~/.codex/config or mcp config (per tool convention)
+  Project-only note:   .bd68/PROJECT.md → thêm vào section key_libs hoặc docs
+
+STEP 3 — Sau khi install global:
+  Remind user:
+  "Đã cài global. Nếu muốn sync vào source kit, chạy:
+   install-agent-pack.ps1 -Target codex
+   từ thư mục bd_dev_kit."
+
+NEVER:
+  - Cài trực tiếp vào project folder mà không hỏi
+  - Giả định target mà không confirm
+  - Bỏ qua bước remind sync sau install global
 
