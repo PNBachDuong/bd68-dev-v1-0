@@ -30,17 +30,7 @@ function New-ContextGuardStatusLine {
             }
         }
     } else {
-        $contextOptimizationPct = $null
-        if ($null -ne $ProxyInputTokens -and $ProxyInputTokens -gt 0 -and $null -ne $CachedInputTokens -and $CachedInputTokens -ge 0) {
-            $rawPct = ($CachedInputTokens / [double]$ProxyInputTokens) * 100
-            $contextOptimizationPct = [math]::Round([math]::Min(100.0, [math]::Max(0.0, $rawPct)), 1)
-        }
-
-        if ($null -ne $contextOptimizationPct) {
-            $skillLines.Add("Skill: context-optimization: bật | tối ưu ~$contextOptimizationPct% (ước tính)")
-        } else {
-            $skillLines.Add("Skill: context-optimization: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)")
-        }
+        $skillLines.Add("Skill: context-optimization: bật | vai trò: lọc ngữ cảnh liên quan, giảm nhiễu")
         $skillLines.Add("Skill: context-window-management: bật | mục tiêu: giữ ổn định cửa sổ ngữ cảnh")
 
         if ($null -ne $ProxyInputTokens -and $ProxyInputTokens -ge $CompressionOnThreshold) {
@@ -50,7 +40,7 @@ function New-ContextGuardStatusLine {
         if ($null -ne $ProxyInputTokens -and $ProxyInputTokens -gt 0 -and $null -ne $CachedInputTokens -and $CachedInputTokens -gt 0) {
             $cacheRawPct = ($CachedInputTokens / [double]$ProxyInputTokens) * 100
             $cacheHitPct = [math]::Round([math]::Min(100.0, [math]::Max(0.0, $cacheRawPct)), 1)
-            $skillLines.Add("Skill: prompt-caching: bật | cache hit ~$cacheHitPct% (ước tính)")
+            $skillLines.Add("Prompt cache: bật | tái sử dụng input: ~$cacheHitPct% ($CachedInputTokens/$ProxyInputTokens tokens) | tác động: tiết kiệm token cao")
         }
     }
 
