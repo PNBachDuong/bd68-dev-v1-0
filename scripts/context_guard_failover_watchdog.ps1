@@ -15,7 +15,7 @@ if ($PollSeconds -lt 1) {
     $PollSeconds = 1
 }
 
-$statusScript = Join-Path $PSScriptRoot "context_guard_proxy_status.ps1"
+$statusScript = Join-Path $PSScriptRoot "context_guard_thread_status.ps1"
 if (-not (Test-Path -LiteralPath $statusScript)) {
     throw "Missing status script: $statusScript"
 }

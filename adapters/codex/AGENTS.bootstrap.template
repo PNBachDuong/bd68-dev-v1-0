@@ -6,8 +6,10 @@
 - If `memoryai` returns repeated `5xx` or timeout errors, switch to memory-degraded mode (skip memory calls for the session).
 - If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
 - Preferred anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy workflows).
-- Guard Context runtime path is expected through local proxy `127.0.0.1:8787` when enabled.
+- Apply 5-skill add-on gate: always-on `context-optimization` + `context-window-management`; enable `context-compression` only for large input (`>= 120k`), `prompt-caching` only for repetitive traffic (`cache hit >= 30%`), and `hierarchical-agent-memory` only for stable multi-session tasks.
+- Guard Context runtime path is expected through local thread `127.0.0.1:8787` when enabled.
 - Always-visible Guard Context line should use Codex session token telemetry from:
-  - `scripts/context_guard_proxy_metrics.ps1`
+  - `scripts/context_guard_thread_metrics.ps1`
+- Also surface `SkillGateLine` from the same script so each turn shows which 5-skill gates are on/off and for what purpose.
 - If token telemetry is unavailable, report:
   - `Input: N/A | Output: N/A`

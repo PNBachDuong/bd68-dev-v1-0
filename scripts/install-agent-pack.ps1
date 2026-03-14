@@ -348,11 +348,11 @@ function Register-ProxyStartupLauncher {
 
     $startupDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup"
     Ensure-Directory -Path $startupDir
-    $launcherPath = Join-Path $startupDir "bd68-context-guard-proxy.cmd"
+    $launcherPath = Join-Path $startupDir "bd68-context-guard-thread.cmd"
 
     $pwsh = Get-PreferredPowerShell
     $safeRoot = $InstallRoot.Replace("'", "''")
-    $line = '"' + $pwsh + '" -NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "Set-Location ''' + $safeRoot + '''; .\scripts\start_context_guard_proxy.ps1 -Background"'
+    $line = '"' + $pwsh + '" -NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "Set-Location ''' + $safeRoot + '''; .\scripts\start_context_guard_thread.ps1 -Background"'
     Set-Content -LiteralPath $launcherPath -Value "@echo off`r`n$line`r`n" -Encoding ASCII
     return $launcherPath
 }
@@ -364,7 +364,7 @@ function Start-ProxyDetachedNow {
 
     $pwsh = Get-PreferredPowerShell
     $safeRoot = $InstallRoot.Replace("'", "''")
-    $cmd = "Set-Location '$safeRoot'; .\scripts\start_context_guard_proxy.ps1 -Background"
+    $cmd = "Set-Location '$safeRoot'; .\scripts\start_context_guard_thread.ps1 -Background"
     Start-Process -FilePath $pwsh -ArgumentList @("-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-Command", $cmd) | Out-Null
 }
 
@@ -495,27 +495,27 @@ if ($Target -eq "codex") {
         Write-Host "MCP binary install: skipped by flag"
     }
     if ($EnableProxy -and $null -ne $proxyResult) {
-        Write-Host "Proxy base_url updated: $($proxyResult.OldBaseUrl) -> $($proxyResult.NewBaseUrl)"
+        Write-Host "Thread base_url updated: $($proxyResult.OldBaseUrl) -> $($proxyResult.NewBaseUrl)"
         if (-not [string]::IsNullOrWhiteSpace($proxyResult.BackupPath)) {
             Write-Host "Config backup: $($proxyResult.BackupPath)"
         } else {
             Write-Host "Config backup: skipped (new config created)"
         }
-        Write-Host "Proxy config created: $($proxyResult.ConfigCreated)"
-        Write-Host "Proxy llmgate section added: $($proxyResult.AddedLlmgateSection)"
+        Write-Host "Thread config created: $($proxyResult.ConfigCreated)"
+        Write-Host "Thread llmgate section added: $($proxyResult.AddedLlmgateSection)"
     } else {
-        Write-Host "Proxy config update: skipped"
+        Write-Host "Thread config update: skipped"
     }
     if (-not [string]::IsNullOrWhiteSpace($startupLauncher)) {
-        Write-Host "Proxy startup launcher: $startupLauncher"
+        Write-Host "Thread startup launcher: $startupLauncher"
     } else {
-        Write-Host "Proxy startup launcher: skipped"
+        Write-Host "Thread startup launcher: skipped"
     }
     if ($EnableProxy -and $StartProxyNow) {
-        Write-Host "Proxy health check: $(if ($healthOk) { 'OK' } else { 'FAILED' })"
+        Write-Host "Thread health check: $(if ($healthOk) { 'OK' } else { 'FAILED' })"
         Write-Host "Health URL: http://127.0.0.1:8787/__guard/health"
     } else {
-        Write-Host "Proxy health check: skipped"
+        Write-Host "Thread health check: skipped"
     }
     Write-Host "Open a new Codex thread (or restart app) to ensure runtime picks up the updated base_url/profile."
     exit 0

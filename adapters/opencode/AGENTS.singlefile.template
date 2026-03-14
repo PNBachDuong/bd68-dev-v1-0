@@ -75,6 +75,21 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 - Before implementation, confirm API and SDK behavior with official docs.
 
+## 5-Skill Add-on Gate
+- Priority order: `giam ao giac -> toi uu ngu canh -> giam token`.
+- Never run all five skills all-ways-on. Use gated activation with hysteresis.
+- Always-on core:
+  - `context-optimization`
+  - `context-window-management`
+- Conditional activation:
+  - `context-compression`: ON when `Input >= 120,000` tokens or one-shot payload is clearly oversized; OFF only after `Input <= 90,000` for at least 3 consecutive turns.
+  - `prompt-caching`: ON when request pattern is repetitive and cache hit stays `>= 30%`; OFF when cache hit drops to `<= 20%` for 2 windows or stale-cache regressions appear.
+  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon tasks and only when memory backend is stable (no repeated `5xx` or timeout in the same session). Keep OFF for one-shot or memory-degraded mode.
+- Safety precedence:
+  - If retrieval has no verifiable evidence, answer `không đủ dữ liệu`.
+  - If compression drops critical facts, roll back compression first.
+  - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
+
 ## VFS Turn Report
 - On any assistant turn where `vfs` is called, append:
   - `Mức sử dụng MCP: thấp/vừa/cao | Tên MCP đã gọi: <name của mcp>`
@@ -83,7 +98,8 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 ## Guard Context Always-Visible
 - On every assistant turn, append:
   - `Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt`
-- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (Codex `token_count` session telemetry), not proxy log and not memoryAI telemetry.
+  - `SkillGate: context-optimization=...; context-window-management=...; context-compression=...; prompt-caching=...; hierarchical-agent-memory=...`
+- Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
 - For real payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 - Soft trigger policy:
   - `< 200,000`: monitor only.

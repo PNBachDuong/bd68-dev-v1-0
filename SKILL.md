@@ -9,6 +9,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Continue BD68 or WildSoul work with the existing Codex setup.
 - Review or explain the current MCP and skill stack.
 - Decide whether a candidate skill is worth adding.
+- Operate the 5-skill add-on gate (`context-window-management`, `context-optimization`, `context-compression`, `prompt-caching`, `hierarchical-agent-memory`) with risk-first defaults.
 - Check the Impeccable design compass before frontend brainstorming or design planning.
 - Use concise-planning when the user asks for a plan, roadmap, or task breakdown.
 - Use the antigravity skill library as a lookup source only when the current installed skills do not cover a repeated need.
@@ -61,13 +62,29 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Store full tool logs out-of-band; keep only compact tool summaries in conversational context.
 - Enforce a pre-send token budget guard: trim tool output, drop non-essential payload, and summarize old turns when over budget.
 - Use a sliding-window dialog history plus a compact summary for older turns.
-- Runtime option: run `scripts/context_guard_proxy.js` and route `llmgate` through `127.0.0.1:8787` for auto pre-send enforcement.
+- Runtime option: run `scripts/context_guard_thread.js` and route `llmgate` through local thread `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
 - Anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy graphs).
-- Skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `context-window-management`, `lint-and-validate`.
+- Core skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `lint-and-validate`.
+- Context add-on skills: `context-window-management`, `context-optimization`, `context-compression`, `prompt-caching`, `hierarchical-agent-memory` (apply by gate, not all-ways-on).
 - Add a new skill only if it fills a repeated gap and is likely to reduce either tool calls or context usage.
+
+## 5-Skill Add-on Gate
+- Priority order: `giam ao giac -> toi uu ngu canh -> giam token`.
+- Never run all five skills all-ways-on. Use gated activation with hysteresis.
+- Always-on core:
+  - `context-optimization`
+  - `context-window-management`
+- Conditional activation:
+  - `context-compression`: ON when `Input >= 120,000` tokens or payload is clearly oversized for one-shot; OFF only after `Input <= 90,000` for at least 3 consecutive turns.
+  - `prompt-caching`: ON when request pattern is repetitive and cache hit stays `>= 30%`; OFF when cache hit drops to `<= 20%` for 2 windows or stale-cache regressions appear.
+  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon work and only when memory backend is stable (no repeated `5xx` or timeout in the same session). Keep OFF for one-shot or memory-degraded mode.
+- Safety precedence:
+  - If retrieval has no verifiable evidence, answer `không đủ dữ liệu`.
+  - If compression drops critical facts, roll back compression first.
+  - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
 ## Pack References
 - `references/SOURCE_INDEX.md` is the provenance index for local references included in this pack.
@@ -120,8 +137,9 @@ VFS: bật/tắt | tối ưu: ...%
 On every assistant turn, append:
 ```text
 Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt
+SkillGate: context-optimization=...; context-window-management=...; context-compression=...; prompt-caching=...; hierarchical-agent-memory=...
 ```
-- Source of truth for this line: `scripts/context_guard_proxy_metrics.ps1` (Codex `token_count` session telemetry), not proxy log and not memoryAI telemetry.
+- Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
 - For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.
 - Soft trigger policy:
   - `< 200,000`: monitor only.

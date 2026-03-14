@@ -10,7 +10,7 @@ Rules:
 
 Current implementation:
 - `opencode/`: implemented and installable
-- `codex/`: implemented and installable (skill sync, AGENTS bootstrap, proxy setup)
+- `codex/`: implemented and installable (skill sync, AGENTS bootstrap, thread setup)
 
 Planned later:
 - other IDE adapters can be added without changing the shared profile shape

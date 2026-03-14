@@ -8,13 +8,13 @@ This repo is now organized as an IDE-agnostic pack:
 - `adapters/` contains IDE-specific bootstrap files
 - `scripts/` contains installers or helper scripts
   - `scripts/codex_guard_send.ps1`: preflight payload budget check + auto mode selection (`Safe/Balanced/Aggressive`)
-  - `scripts/context_guard_proxy.js`: local runtime proxy for automatic pre-send guard enforcement
-  - `scripts/context_guard_proxy_metrics.ps1`: read latest proxy input/output token metrics from runtime log
-  - `scripts/context_guard_proxy_trace.ps1`: show pipeline metrics for `input -> proxy -> llmgate` and `llmgate -> proxy`
-  - `scripts/context_guard_proxy_status.ps1`: proxy health + auto failover switch (`proxy -> direct llmgate` when proxy down)
-  - `scripts/start_context_guard_proxy.ps1`: start proxy (foreground or `-Background`)
-  - `scripts/enable_context_guard_proxy.ps1`: point global Codex `llmgate` base_url to the local proxy
-  - `scripts/disable_context_guard_proxy.ps1`: rollback global Codex config from backup
+  - `scripts/context_guard_thread.js`: local runtime thread route for automatic pre-send guard enforcement
+  - `scripts/context_guard_thread_metrics.ps1`: read latest thread input/output token metrics from runtime log
+  - `scripts/context_guard_thread_trace.ps1`: show pipeline metrics for `input -> thread -> llmgate` and `llmgate -> thread`
+  - `scripts/context_guard_thread_status.ps1`: thread health + auto failover switch (`thread -> direct llmgate` when thread is down)
+  - `scripts/start_context_guard_thread.ps1`: start thread route (foreground or `-Background`)
+  - `scripts/enable_context_guard_thread.ps1`: point global Codex `llmgate` base_url to the local thread route
+  - `scripts/disable_context_guard_thread.ps1`: rollback global Codex config from backup
 
 ## Current Status
 - Implemented adapters: `OpenCode`, `Codex`
@@ -47,6 +47,13 @@ This repo is now organized as an IDE-agnostic pack:
 - keep the short GPT-5.4 token cost summary behavior available
 - make the BD68 profile portable without requiring non-Codex IDEs to inspect `.codex`
 
+## 5-Skill Add-on Default
+- Priority order: `giam ao giac -> toi uu ngu canh -> giam token`.
+- Do not run all 5 skills all-ways-on.
+- Always-on core: `context-optimization`, `context-window-management`.
+- Conditional: `context-compression` (`Input >= 120k`, OFF after `<= 90k` for 3 turns), `prompt-caching` (ON when repetitive + cache hit `>= 30%`, OFF when `<= 20%` for 2 windows), `hierarchical-agent-memory` (default OFF; only ON for stable multi-session tasks).
+- If retrieval has no verifiable evidence, respond `không đủ dữ liệu` instead of guessing.
+
 ## OpenCode Install
 Install the OpenCode adapter on Windows:
 
@@ -73,16 +80,16 @@ What it does:
 - syncs this pack into `C:\Users\<user>\.codex\skills\bd_dev_kit`
 - injects/updates a marked bootstrap block in `C:\Users\<user>\.codex\AGENTS.md`
 - auto-installs MCP binaries for `memoryai`, `chub`, and `vfs` (best effort, with explicit status output)
-- sets proxy runtime base URL to `http://127.0.0.1:8787` under `[model_providers.llmgate]`
+- sets thread runtime base URL to `http://127.0.0.1:8787` under `[model_providers.llmgate]`
 - creates `config.toml` or missing llmgate section automatically if not present
 - creates a backup when `config.toml` already exists
-- optionally registers a startup launcher and can start proxy immediately
+- optionally registers a startup launcher and can start thread route immediately
 
 Requirement:
 - target machine needs internet access
-- `node` and `npm` are required to install `memoryai/chub` and to run proxy runtime (`context_guard_proxy.js`)
+- `node` and `npm` are required to install `memoryai/chub` and to run thread runtime (`context_guard_thread.js`)
 - vfs is installed from GitHub release when missing (`TrNgTien/vfs`)
-- if MCP install fails and you still want profile/proxy setup only, use `-FailOnMcpInstallError:$false`
+- if MCP install fails and you still want profile/thread setup only, use `-FailOnMcpInstallError:$false`
 
 Useful optional flags:
 - `-EnableProxy:$false` to install profile only, without proxy config changes
@@ -92,4 +99,4 @@ Useful optional flags:
 - `-StartProxyNow:$false` to skip immediate proxy start/health wait
 - `-CodexRootPath <path>` to test against a custom clean directory
 
-After the command completes, open a new Codex thread (or restart app) to ensure runtime picks up the updated profile and proxy route.
+After the command completes, open a new Codex thread (or restart app) to ensure runtime picks up the updated profile and thread route.
