@@ -128,6 +128,40 @@ function Parse-JsonObjectOrNull {
     }
 }
 
+function Get-AddonStatusFromRuntime {
+    param([string]$Root)
+
+    $configPath = Join-Path $Root "config.toml"
+    $serenaConfigured = $false
+    if (Test-Path -LiteralPath $configPath) {
+        try {
+            $configText = Get-Content -LiteralPath $configPath -Raw -ErrorAction Stop
+            if ($configText -match '(?ms)^\[mcp_servers\.serena\]\s*.*?(?=^\[|\z)') {
+                $serenaConfigured = $true
+            }
+        } catch {
+            $serenaConfigured = $false
+        }
+    }
+
+    $gstackLitePath = Join-Path $Root "skills\gstack-lite\SKILL.md"
+    $gstackLiteInstalled = Test-Path -LiteralPath $gstackLitePath
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    if ($serenaConfigured) {
+        $lines.Add("Serena: bật (on-demand) | mục đích: local code retrieval/edit")
+    }
+    if ($gstackLiteInstalled) {
+        $lines.Add("gstack-lite: bật (on-demand) | gate: product/engineering/ship")
+    }
+
+    return [pscustomobject]@{
+        SerenaConfigured = $serenaConfigured
+        GstackLiteInstalled = $gstackLiteInstalled
+        AddonLines = @($lines)
+    }
+}
+
 function Get-RetrievalUsageFromFile {
     param(
         [string]$Path,
@@ -148,8 +182,15 @@ function Get-RetrievalUsageFromFile {
     $contextHubCalls = 0
     $context7Used = $false
     $contextHubUsed = $false
+    $serenaCalls = 0
+    $serenaUsed = $false
+    $gstackLiteUsed = $false
 
     foreach ($line in $lines) {
+        if (-not $gstackLiteUsed -and $line -match '(?i)gstack-lite|product-gate|engineering-gate|ship-gate') {
+            $gstackLiteUsed = $true
+        }
+
         if (-not $line.Contains("function_call")) {
             continue
         }
@@ -167,6 +208,12 @@ function Get-RetrievalUsageFromFile {
         $name = [string]$payload.name
         $argumentsRaw = [string]$payload.arguments
         $arguments = Parse-JsonObjectOrNull -JsonText $argumentsRaw
+
+        if ($name -like "mcp__*serena*") {
+            $serenaUsed = $true
+            $serenaCalls++
+            continue
+        }
 
         if ($name -like "mcp__chub__*") {
             $contextHubUsed = $true
@@ -227,12 +274,21 @@ function Get-RetrievalUsageFromFile {
             $retrievalLines.Add("ContextHub: đã truy cập (không có id thư viện trong log)")
         }
     }
+    if ($serenaUsed) {
+        $retrievalLines.Add("Serena: đã truy cập local code tools trong phiên")
+    }
+    if ($gstackLiteUsed) {
+        $retrievalLines.Add("gstack-lite: đã kích hoạt gate điều phối trong phiên")
+    }
 
     return [pscustomobject]@{
         Context7Used = $context7Used
         ContextHubUsed = $contextHubUsed
         Context7Calls = $context7Calls
         ContextHubCalls = $contextHubCalls
+        SerenaUsed = $serenaUsed
+        SerenaCalls = $serenaCalls
+        GstackLiteUsed = $gstackLiteUsed
         Context7Libraries = $context7Top
         ContextHubLibraries = $contextHubTop
         RetrievalLines = @($retrievalLines)
@@ -301,6 +357,37 @@ function Resolve-GuardDecision {
     }
 }
 
+function Merge-StatusLines {
+    param(
+        [string[]]$UsageLines = @(),
+        [string[]]$AddonLines = @(),
+        [bool]$SerenaUsed = $false,
+        [bool]$GstackLiteUsed = $false
+    )
+
+    $merged = New-Object System.Collections.Generic.List[string]
+    foreach ($line in @($UsageLines)) {
+        if (-not [string]::IsNullOrWhiteSpace($line)) {
+            $merged.Add($line)
+        }
+    }
+
+    foreach ($line in @($AddonLines)) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            continue
+        }
+        if ($SerenaUsed -and $line.StartsWith("Serena:")) {
+            continue
+        }
+        if ($GstackLiteUsed -and $line.StartsWith("gstack-lite:")) {
+            continue
+        }
+        $merged.Add($line)
+    }
+
+    return @($merged)
+}
+
 $recentFiles = @(Get-RecentSessionFiles -Root $CodexRoot -Limit $MaxRecentFiles)
 $latestEvent = $null
 foreach ($f in $recentFiles) {
@@ -313,6 +400,7 @@ foreach ($f in $recentFiles) {
 
 if ($null -eq $latestEvent) {
     $usage = $null
+    $addonStatus = Get-AddonStatusFromRuntime -Root $CodexRoot
     if ($recentFiles.Count -gt 0 -and $null -ne $recentFiles[0]) {
         $usage = Get-RetrievalUsageFromFile -Path $recentFiles[0].FullName -Tail $UsageScanTail -MaxLibraries $MaxLibrariesPerSource
     }
@@ -323,7 +411,7 @@ if ($null -eq $latestEvent) {
         -ProxyInputTokens $null `
         -ProxyOutputTokens $null `
         -CachedInputTokens $null `
-        -RetrievalLines $(if ($null -ne $usage) { $usage.RetrievalLines } else { @() }) `
+        -RetrievalLines $(Merge-StatusLines -UsageLines $(if ($null -ne $usage) { $usage.RetrievalLines } else { @() }) -AddonLines $addonStatus.AddonLines -SerenaUsed $(if ($null -ne $usage) { $usage.SerenaUsed } else { $false }) -GstackLiteUsed $(if ($null -ne $usage) { $usage.GstackLiteUsed } else { $false })) `
         -SoftTriggerState "chưa kích hoạt"
 
     [pscustomobject]@{
@@ -343,13 +431,18 @@ if ($null -eq $latestEvent) {
         Trigger = "inactive"
         Mode = "N/A"
         Applied = $false
+        SerenaConfigured = $addonStatus.SerenaConfigured
+        GstackLiteInstalled = $addonStatus.GstackLiteInstalled
         Context7Used = $(if ($null -ne $usage) { $usage.Context7Used } else { $false })
         ContextHubUsed = $(if ($null -ne $usage) { $usage.ContextHubUsed } else { $false })
+        SerenaUsed = $(if ($null -ne $usage) { $usage.SerenaUsed } else { $false })
+        GstackLiteUsed = $(if ($null -ne $usage) { $usage.GstackLiteUsed } else { $false })
         Context7Calls = $(if ($null -ne $usage) { $usage.Context7Calls } else { 0 })
         ContextHubCalls = $(if ($null -ne $usage) { $usage.ContextHubCalls } else { 0 })
+        SerenaCalls = $(if ($null -ne $usage) { $usage.SerenaCalls } else { 0 })
         Context7Libraries = @($(if ($null -ne $usage) { $usage.Context7Libraries } else { @() }))
         ContextHubLibraries = @($(if ($null -ne $usage) { $usage.ContextHubLibraries } else { @() }))
-        StatusFormatVersion = "v3"
+        StatusFormatVersion = "v4"
         StatusLine = $status.GuardLine
         SkillGateLine = $status.SkillLine
         StatusLineWithSkills = $status.CombinedLine
@@ -364,6 +457,7 @@ $decision = Resolve-GuardDecision `
     -HardThreshold $HardThresholdTokens
 
 $usage = Get-RetrievalUsageFromFile -Path $latestEvent.SessionFile -Tail $UsageScanTail -MaxLibraries $MaxLibrariesPerSource
+$addonStatus = Get-AddonStatusFromRuntime -Root $CodexRoot
 
 $status = New-ContextGuardStatusLine `
     -GuardContextState $decision.GuardState `
@@ -371,7 +465,7 @@ $status = New-ContextGuardStatusLine `
     -ProxyInputTokens $latestEvent.LastInputTokens `
     -ProxyOutputTokens $latestEvent.LastOutputTokens `
     -CachedInputTokens $latestEvent.LastCachedInputTokens `
-    -RetrievalLines $usage.RetrievalLines `
+    -RetrievalLines $(Merge-StatusLines -UsageLines $usage.RetrievalLines -AddonLines $addonStatus.AddonLines -SerenaUsed $usage.SerenaUsed -GstackLiteUsed $usage.GstackLiteUsed) `
     -SoftTriggerState $decision.SoftState
 
 [pscustomobject]@{
@@ -406,13 +500,18 @@ $status = New-ContextGuardStatusLine `
     ProbeAttempted = $false
     ProbeSucceeded = $false
     ProbeError = $null
+    SerenaConfigured = $addonStatus.SerenaConfigured
+    GstackLiteInstalled = $addonStatus.GstackLiteInstalled
     Context7Used = $usage.Context7Used
     ContextHubUsed = $usage.ContextHubUsed
+    SerenaUsed = $usage.SerenaUsed
+    GstackLiteUsed = $usage.GstackLiteUsed
     Context7Calls = $usage.Context7Calls
     ContextHubCalls = $usage.ContextHubCalls
+    SerenaCalls = $usage.SerenaCalls
     Context7Libraries = @($usage.Context7Libraries)
     ContextHubLibraries = @($usage.ContextHubLibraries)
-    StatusFormatVersion = "v3"
+    StatusFormatVersion = "v4"
     StatusLine = $status.GuardLine
     SkillGateLine = $status.SkillLine
     StatusLineWithSkills = $status.CombinedLine
