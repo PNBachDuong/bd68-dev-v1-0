@@ -436,6 +436,14 @@ if ($Target -eq "codex") {
     Ensure-Directory -Path $codexRoot
     Ensure-Directory -Path $skillsRoot
     $copyCode = Copy-PackTree -Source $repoRoot -Destination $installRoot
+    $gstackLiteSource = Join-Path $repoRoot "skills\gstack-lite"
+    $gstackLiteInstallRoot = Join-Path $skillsRoot "gstack-lite"
+    $gstackLiteCopyCode = -1
+    if (Test-Path -LiteralPath $gstackLiteSource) {
+        $gstackLiteCopyCode = Copy-PackTree -Source $gstackLiteSource -Destination $gstackLiteInstallRoot
+    } else {
+        Write-Warning "gstack-lite skill source not found at $gstackLiteSource"
+    }
 
     $bootstrapTemplatePath = Join-Path $repoRoot "adapters\codex\AGENTS.bootstrap.template"
     if (Test-Path -LiteralPath $bootstrapTemplatePath) {
@@ -472,9 +480,17 @@ if ($Target -eq "codex") {
     }
 
     Write-Host "BD68 Dev v1.1 installed for Codex."
-    Write-Host "Skill path: $installRoot"
+    Write-Host "Skill path (bd_dev_kit): $installRoot"
+    if ($gstackLiteCopyCode -ge 0) {
+        Write-Host "Skill path (gstack-lite): $gstackLiteInstallRoot"
+    } else {
+        Write-Host "Skill path (gstack-lite): skipped (source missing)"
+    }
     Write-Host "AGENTS bootstrap path: $agentsPath"
     Write-Host "Pack sync robocopy exit: $copyCode"
+    if ($gstackLiteCopyCode -ge 0) {
+        Write-Host "gstack-lite sync robocopy exit: $gstackLiteCopyCode"
+    }
     if ($InstallMcpBinaries) {
         if ($null -ne $mcpInstallResult) {
             Write-Host "MCP binary install: completed"
