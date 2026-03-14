@@ -1,7 +1,9 @@
 param(
     [string]$CodexRoot = "C:\Users\ngath\.codex",
     [int]$ScanTail = 600,
+    [int]$UsageScanTail = 2000,
     [int]$MaxRecentFiles = 60,
+    [int]$MaxLibrariesPerSource = 3,
     [int]$SoftThresholdTokens = 200000,
     [int]$EscalateThresholdTokens = 240000,
     [int]$HardThresholdTokens = 250000,
@@ -100,6 +102,7 @@ function Get-LatestTokenEventFromFile {
                 SessionFile = $Path
                 Timestamp = [string]$obj.timestamp
                 LastInputTokens = Convert-ToNullableInt $info.last_token_usage.input_tokens
+                LastCachedInputTokens = Convert-ToNullableInt $info.last_token_usage.cached_input_tokens
                 LastOutputTokens = Convert-ToNullableInt $info.last_token_usage.output_tokens
                 TotalInputTokens = Convert-ToNullableInt $info.total_token_usage.input_tokens
                 TotalOutputTokens = Convert-ToNullableInt $info.total_token_usage.output_tokens
@@ -111,6 +114,129 @@ function Get-LatestTokenEventFromFile {
     }
 
     return $null
+}
+
+function Parse-JsonObjectOrNull {
+    param([string]$JsonText)
+    if ([string]::IsNullOrWhiteSpace($JsonText)) {
+        return $null
+    }
+    try {
+        return $JsonText | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        return $null
+    }
+}
+
+function Get-RetrievalUsageFromFile {
+    param(
+        [string]$Path,
+        [int]$Tail,
+        [int]$MaxLibraries
+    )
+
+    $lines = @()
+    try {
+        $lines = Get-Content -LiteralPath $Path -Tail $Tail -ErrorAction Stop
+    } catch {
+        $lines = @()
+    }
+
+    $context7Libs = New-Object System.Collections.Generic.List[string]
+    $contextHubLibs = New-Object System.Collections.Generic.List[string]
+    $context7Calls = 0
+    $contextHubCalls = 0
+    $context7Used = $false
+    $contextHubUsed = $false
+
+    foreach ($line in $lines) {
+        if (-not $line.Contains("function_call")) {
+            continue
+        }
+
+        $entry = Parse-JsonObjectOrNull -JsonText $line
+        if ($null -eq $entry) {
+            continue
+        }
+
+        $payload = $entry.payload
+        if ($null -eq $payload -or [string]$payload.type -ne "function_call") {
+            continue
+        }
+
+        $name = [string]$payload.name
+        $argumentsRaw = [string]$payload.arguments
+        $arguments = Parse-JsonObjectOrNull -JsonText $argumentsRaw
+
+        if ($name -like "mcp__chub__*") {
+            $contextHubUsed = $true
+            $contextHubCalls++
+            if ($null -ne $arguments) {
+                $idProp = $arguments.PSObject.Properties["id"]
+                $id = if ($null -ne $idProp) { [string]$idProp.Value } else { "" }
+                if (-not [string]::IsNullOrWhiteSpace($id) -and -not $contextHubLibs.Contains($id)) {
+                    $contextHubLibs.Add($id)
+                }
+            }
+            continue
+        }
+
+        if ($name -like "mcp__*context7*") {
+            $context7Used = $true
+            $context7Calls++
+            if ($null -eq $arguments) {
+                continue
+            }
+
+            $candidateFields = @(
+                "libraryId",
+                "library_id",
+                "libraryName",
+                "library_name",
+                "context7CompatibleLibraryID"
+            )
+            foreach ($field in $candidateFields) {
+                    $value = $arguments.PSObject.Properties[$field]
+                    if ($null -ne $value) {
+                        $text = [string]$value.Value
+                        # Keep library-like identifiers only (avoid generic free-text queries).
+                        if (-not [string]::IsNullOrWhiteSpace($text) -and -not ($text -match '\s') -and -not $context7Libs.Contains($text)) {
+                            $context7Libs.Add($text)
+                        }
+                        break
+                    }
+                }
+        }
+    }
+
+    $context7Top = @($context7Libs | Select-Object -First $MaxLibraries)
+    $contextHubTop = @($contextHubLibs | Select-Object -First $MaxLibraries)
+
+    $retrievalLines = New-Object System.Collections.Generic.List[string]
+    if ($context7Used) {
+        if ($context7Top.Count -gt 0) {
+            $retrievalLines.Add("Context7: đã truy cập thư viện: $($context7Top -join ', ')")
+        } else {
+            $retrievalLines.Add("Context7: đã truy cập (không có tên thư viện trong log)")
+        }
+    }
+    if ($contextHubUsed) {
+        if ($contextHubTop.Count -gt 0) {
+            $retrievalLines.Add("ContextHub: đã truy cập thư viện: $($contextHubTop -join ', ')")
+        } else {
+            $retrievalLines.Add("ContextHub: đã truy cập (không có id thư viện trong log)")
+        }
+    }
+
+    return [pscustomobject]@{
+        Context7Used = $context7Used
+        ContextHubUsed = $contextHubUsed
+        Context7Calls = $context7Calls
+        ContextHubCalls = $contextHubCalls
+        Context7Libraries = $context7Top
+        ContextHubLibraries = $contextHubTop
+        RetrievalLines = @($retrievalLines)
+    }
 }
 
 function Resolve-GuardDecision {
@@ -175,7 +301,7 @@ function Resolve-GuardDecision {
     }
 }
 
-$recentFiles = Get-RecentSessionFiles -Root $CodexRoot -Limit $MaxRecentFiles
+$recentFiles = @(Get-RecentSessionFiles -Root $CodexRoot -Limit $MaxRecentFiles)
 $latestEvent = $null
 foreach ($f in $recentFiles) {
     $candidate = Get-LatestTokenEventFromFile -Path $f.FullName -Tail $ScanTail
@@ -186,11 +312,18 @@ foreach ($f in $recentFiles) {
 }
 
 if ($null -eq $latestEvent) {
+    $usage = $null
+    if ($recentFiles.Count -gt 0 -and $null -ne $recentFiles[0]) {
+        $usage = Get-RetrievalUsageFromFile -Path $recentFiles[0].FullName -Tail $UsageScanTail -MaxLibraries $MaxLibrariesPerSource
+    }
+
     $status = New-ContextGuardStatusLine `
         -GuardContextState "tắt" `
         -Mode "N/A" `
         -ProxyInputTokens $null `
         -ProxyOutputTokens $null `
+        -CachedInputTokens $null `
+        -RetrievalLines $(if ($null -ne $usage) { $usage.RetrievalLines } else { @() }) `
         -SoftTriggerState "chưa kích hoạt"
 
     [pscustomobject]@{
@@ -199,14 +332,23 @@ if ($null -eq $latestEvent) {
         Source = "codex_session_token_count"
         CodexRoot = $CodexRoot
         ScanTail = $ScanTail
+        UsageScanTail = $UsageScanTail
         MaxRecentFiles = $MaxRecentFiles
+        MaxLibrariesPerSource = $MaxLibrariesPerSource
         ProxyInputTokensEstimate = $null
         ProxyOutputTokensEstimate = $null
+        CachedInputTokensEstimate = $null
         ThreadInputTokensEstimate = $null
         ThreadOutputTokensEstimate = $null
         Trigger = "inactive"
         Mode = "N/A"
         Applied = $false
+        Context7Used = $(if ($null -ne $usage) { $usage.Context7Used } else { $false })
+        ContextHubUsed = $(if ($null -ne $usage) { $usage.ContextHubUsed } else { $false })
+        Context7Calls = $(if ($null -ne $usage) { $usage.Context7Calls } else { 0 })
+        ContextHubCalls = $(if ($null -ne $usage) { $usage.ContextHubCalls } else { 0 })
+        Context7Libraries = @($(if ($null -ne $usage) { $usage.Context7Libraries } else { @() }))
+        ContextHubLibraries = @($(if ($null -ne $usage) { $usage.ContextHubLibraries } else { @() }))
         StatusFormatVersion = "v3"
         StatusLine = $status.GuardLine
         SkillGateLine = $status.SkillLine
@@ -221,11 +363,15 @@ $decision = Resolve-GuardDecision `
     -EscalateThreshold $EscalateThresholdTokens `
     -HardThreshold $HardThresholdTokens
 
+$usage = Get-RetrievalUsageFromFile -Path $latestEvent.SessionFile -Tail $UsageScanTail -MaxLibraries $MaxLibrariesPerSource
+
 $status = New-ContextGuardStatusLine `
     -GuardContextState $decision.GuardState `
     -Mode $decision.Mode `
     -ProxyInputTokens $latestEvent.LastInputTokens `
     -ProxyOutputTokens $latestEvent.LastOutputTokens `
+    -CachedInputTokens $latestEvent.LastCachedInputTokens `
+    -RetrievalLines $usage.RetrievalLines `
     -SoftTriggerState $decision.SoftState
 
 [pscustomobject]@{
@@ -240,6 +386,7 @@ $status = New-ContextGuardStatusLine `
     DecisionReason = $decision.Reason
     ProxyInputTokensEstimate = $latestEvent.LastInputTokens
     ProxyOutputTokensEstimate = $latestEvent.LastOutputTokens
+    CachedInputTokensEstimate = $latestEvent.LastCachedInputTokens
     ThreadInputTokensEstimate = $latestEvent.LastInputTokens
     ThreadOutputTokensEstimate = $latestEvent.LastOutputTokens
     ModelInputTokens = $latestEvent.LastInputTokens
@@ -249,7 +396,9 @@ $status = New-ContextGuardStatusLine `
     ModelContextWindow = $latestEvent.ModelContextWindow
     CodexRoot = $CodexRoot
     ScanTail = $ScanTail
+    UsageScanTail = $UsageScanTail
     MaxRecentFiles = $MaxRecentFiles
+    MaxLibrariesPerSource = $MaxLibrariesPerSource
     SoftThresholdTokens = $SoftThresholdTokens
     EscalateThresholdTokens = $EscalateThresholdTokens
     HardThresholdTokens = $HardThresholdTokens
@@ -257,6 +406,12 @@ $status = New-ContextGuardStatusLine `
     ProbeAttempted = $false
     ProbeSucceeded = $false
     ProbeError = $null
+    Context7Used = $usage.Context7Used
+    ContextHubUsed = $usage.ContextHubUsed
+    Context7Calls = $usage.Context7Calls
+    ContextHubCalls = $usage.ContextHubCalls
+    Context7Libraries = @($usage.Context7Libraries)
+    ContextHubLibraries = @($usage.ContextHubLibraries)
     StatusFormatVersion = "v3"
     StatusLine = $status.GuardLine
     SkillGateLine = $status.SkillLine
