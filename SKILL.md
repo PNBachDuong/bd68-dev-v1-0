@@ -9,6 +9,8 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Continue BD68 or WildSoul work with the existing Codex setup.
 - Review or explain the current MCP and skill stack.
 - Decide whether a candidate skill is worth adding.
+- Apply Serena-first local code retrieval/edit policy.
+- Apply gstack-lite orchestration gates only when needed.
 - Operate the 5-skill add-on gate (`context-window-management`, `context-optimization`, `context-compression`, `prompt-caching`, `hierarchical-agent-memory`) with risk-first defaults.
 - Check the Impeccable design compass before frontend brainstorming or design planning.
 - Use concise-planning when the user asks for a plan, roadmap, or task breakdown.
@@ -19,6 +21,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Generic coding work that does not depend on the BD68 setup.
 - Third-party API implementation already covered by `get-api-docs` and `chub`.
 - Routine verification already covered by `lint-and-validate`.
+- Letting gstack overlap with `lint-and-validate`, `webapp-testing`, or `github`.
 - Browsing the antigravity catalog by default when an installed skill already fits.
 
 ## Retrieval Order
@@ -66,6 +69,8 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 ## Current Stack
 - MCPs: `memoryai`, `chub`, `vfs`.
 - Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
+- Local code retrieval/edit: `serena` is preferred once onboarded.
+- Workflow orchestration: gstack-lite gates only (`product-gate`, `engineering-gate`, `ship-gate`), not always-on.
 - Anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy graphs).
 - Core skills: `get-api-docs`, `mcp-builder`, `github`, `stripe-best-practices`, `webapp-testing`, `frontend-design`, `lint-and-validate`.
 - Context add-on skills: `context-window-management`, `context-optimization`, `context-compression`, `prompt-caching`, `hierarchical-agent-memory` (apply by gate, not all-ways-on).
@@ -85,6 +90,15 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
   - If retrieval has no verifiable evidence, answer `không đủ dữ liệu`.
   - If compression drops critical facts, roll back compression first.
   - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
+
+## Serena And gstack-lite
+- Serena is primary for local code retrieval/edit when local-code complexity is medium or high.
+- Use gstack-lite only as coordination gates:
+  - `product-gate`: goals, user impact, risk framing.
+  - `engineering-gate`: architecture, interfaces, rollback path.
+  - `ship-gate`: release checklist and handoff readiness.
+- Do not run gstack-lite all-ways-on; activate per phase and turn it off after gate completion.
+- Do not let gstack-lite overlap with `lint-and-validate`, `webapp-testing`, or `github`.
 
 ## Pack References
 - `references/SOURCE_INDEX.md` is the provenance index for local references included in this pack.
@@ -136,8 +150,8 @@ VFS: bật/tắt | tối ưu: ...%
 ## Guard Context Always-Visible
 On every assistant turn, append:
 ```text
-Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt
-SkillGate: context-optimization=...; context-window-management=...; context-compression=...; prompt-caching=...; hierarchical-agent-memory=...
+<StatusLine from scripts/context_guard_thread_metrics.ps1>
+<SkillGateLine from scripts/context_guard_thread_metrics.ps1>
 ```
 - Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
 - For real payload-budget actions, use `scripts/codex_guard_send.ps1` preflight output and Codex session token telemetry.

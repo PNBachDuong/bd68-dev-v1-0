@@ -76,6 +76,12 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Treat `Shubhamsaboo/awesome-llm-apps` as an idea catalog only, not as a technical baseline or source of truth.
 - Before implementation, confirm API and SDK behavior with official docs.
 
+## Serena And gstack-lite
+- Prefer `serena` for local code retrieval/edit when the task touches medium or large code scopes.
+- Use gstack only as lightweight orchestration gates (`product-gate`, `engineering-gate`, `ship-gate`).
+- Do not run gstack all-ways-on.
+- Do not let gstack overlap with `lint-and-validate`, `webapp-testing`, or `github`.
+
 ## 5-Skill Add-on Gate
 - Priority order: `giam ao giac -> toi uu ngu canh -> giam token`.
 - Never run all five skills all-ways-on. Use gated activation with hysteresis.
@@ -98,8 +104,8 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - If exact optimization percent is unavailable, explicitly mark estimate (ước tính), for example: `VFS: bật | tối ưu: ~...% (ước tính)` or `VFS: bật | tối ưu: không đủ dữ liệu chính xác (ước tính)`.
 ## Guard Context Always-Visible
 - On every assistant turn, append:
-  - `Guard: bật/tắt | Mode: N/A/Balanced/Aggressive | Input: ~... tokens | Output: ~... tokens | trigger mềm: chưa kích hoạt/đã kích hoạt`
-  - `SkillGate: context-optimization=...; context-window-management=...; context-compression=...; prompt-caching=...; hierarchical-agent-memory=...`
+  - `StatusLine` from `scripts/context_guard_thread_metrics.ps1`
+  - `SkillGateLine` from `scripts/context_guard_thread_metrics.ps1`
 - Source of truth for these lines: `scripts/context_guard_thread_metrics.ps1` (fields `StatusLine` and `SkillGateLine`, Codex `token_count` session telemetry), not thread log and not memoryAI telemetry.
 - For real payload-budget decisions, use `scripts/codex_guard_send.ps1` preflight metrics and Codex session token telemetry.
 - Soft trigger policy:
