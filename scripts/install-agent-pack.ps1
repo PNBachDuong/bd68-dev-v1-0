@@ -144,26 +144,14 @@ function Ensure-UserPathContains {
 
 function Install-McpBinariesForCodex {
     $result = [ordered]@{
-        MemoryAiPath = ""
         ChubPath = ""
         InstalledPackages = @()
     }
 
     $npmPath = Find-CommandPath @("npm", "npm.cmd")
     if ([string]::IsNullOrWhiteSpace($npmPath)) {
-        throw "npm is required to install memoryai/chub MCP binaries. Install Node.js first."
+        throw "npm is required to install chub MCP binaries. Install Node.js first."
     }
-
-    $memoryAiPath = Find-CommandPath @("memoryai-mcp", "memoryai-mcp.cmd")
-    if ([string]::IsNullOrWhiteSpace($memoryAiPath)) {
-        Invoke-ExternalCommand -FilePath $npmPath -Arguments @("install", "-g", "memoryai-mcp") -Label "Install memoryai-mcp" | Out-Null
-        $memoryAiPath = Find-CommandPath @("memoryai-mcp", "memoryai-mcp.cmd")
-        if ([string]::IsNullOrWhiteSpace($memoryAiPath)) {
-            throw "memoryai-mcp install finished but executable was not found in PATH."
-        }
-        $result.InstalledPackages += "memoryai-mcp"
-    }
-    $result.MemoryAiPath = $memoryAiPath
 
     $chubPath = Find-CommandPath @("chub-mcp", "chub-mcp.cmd", "chub")
     if ([string]::IsNullOrWhiteSpace($chubPath)) {
@@ -406,7 +394,6 @@ if ($Target -eq "codex") {
     if ($InstallMcpBinaries) {
         if ($null -ne $mcpInstallResult) {
             Write-Host "MCP binary install: completed"
-            Write-Host "MCP memoryai path: $($mcpInstallResult.MemoryAiPath)"
             Write-Host "MCP chub path: $($mcpInstallResult.ChubPath)"
             if ($mcpInstallResult.InstalledPackages.Count -gt 0) {
                 Write-Host "MCP npm packages installed: $($mcpInstallResult.InstalledPackages -join ', ')"

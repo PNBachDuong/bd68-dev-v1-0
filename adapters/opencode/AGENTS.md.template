@@ -17,7 +17,6 @@ For third-party API docs, use `chub` as default retrieval source; use Context7 o
 For local code retrieval/edit, prefer `serena` once onboarded.
 Use gstack only as lightweight orchestration gates (`product-gate`, `engineering-gate`, `ship-gate`) and never all-ways-on.
 Do not let gstack overlap with `lint-and-validate`, `webapp-testing`, or `github`.
-If `memoryai` returns repeated `5xx` or timeout errors in the same session, stop memory calls for that session and continue in memory-degraded mode.
 If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
 For anti-guessing in Python agent flows, prefer `pydantic-ai`, `instructor`, and `langsmith` (`langgraph` optional for orchestration-heavy workflows).
 Apply the 5-skill add-on gate from `@bd_dev_kit/BD68_PROFILE.md`: always-on `context-optimization` + `context-window-management`; conditional `context-compression`, `prompt-caching`, and `hierarchical-agent-memory` with hysteresis and memory-stability checks.

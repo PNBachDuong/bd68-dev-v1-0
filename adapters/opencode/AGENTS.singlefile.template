@@ -9,9 +9,6 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Prefer execution over ceremony.
 
 ## Retrieval Order
-- If the environment provides `memoryai`, call `memory_bootstrap` exactly once at session start.
-- Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
-- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for that session.
 - Open `references/SOURCE_INDEX.md` before using a bundled reference so the local source and upstream provenance are explicit.
 - If this pack already contains a curated local reference for the current need, read that local file first and treat it as a valid retrieval source.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
@@ -24,13 +21,6 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
   - Never repeat an identical retrieval call (same tool and same query) within the same turn or subtask.
   - Default retrieval budget per subtask: one discovery call plus one refinement call.
   - If retrieval returns empty, unchanged, or non-actionable results twice, stop repeating and switch to focused file reads.
-## Memory Guardrails
-- Do not repeat `memory_bootstrap` in the same session unless the user explicitly asks for a reset-style re-bootstrap.
-- Do not write memory just to restate a known preference.
-- Call `memory_compact` only at wrap-up, explicit close, or when the context is truly near its limit and compacting is needed to continue safely.
-- Use `memory_health` only when diagnosing context growth or deciding whether compacting is needed.
-- In memory-degraded mode, do not infer from older memory context; rely on fresh retrieval outputs only.
-
 ## Context Hygiene
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates stale context.
 - Keep retrieval narrow and current-task-specific.
@@ -89,11 +79,11 @@ Use this as the default operating model for BD68 and WildSoul work in OpenCode.
 - Conditional activation:
   - `context-compression`: ON when `Input >= 120,000` tokens or one-shot payload is clearly oversized; OFF only after `Input <= 90,000` for at least 3 consecutive turns.
   - `prompt-caching`: ON when request pattern is repetitive and cache hit stays `>= 30%`; OFF when cache hit drops to `<= 20%` for 2 windows or stale-cache regressions appear.
-  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon tasks and only when memory backend is stable (no repeated `5xx` or timeout in the same session). Keep OFF for one-shot or memory-degraded mode.
+  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon tasks with stable persistence backend. Keep OFF for one-shot sessions.
 - Safety precedence:
   - If retrieval has no verifiable evidence, answer `không đủ dữ liệu`.
   - If compression drops critical facts, roll back compression first.
-  - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
+  - If persisted memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
 ## Guard Context Reporting (On-Demand)
 - Do not append status lines by default on every turn.

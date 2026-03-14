@@ -25,14 +25,10 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Browsing the antigravity catalog by default when an installed skill already fits.
 
 ## Retrieval Order
-- Start with `memory_bootstrap` exactly once at session start.
-- In the same session, do not call `memory_bootstrap` again unless the user explicitly asks for a reset-style re-bootstrap.
-- Use `memory_recall` only for related follow-up work, and keep the query narrow and task-specific.
 - Before using a pack reference, open `references/SOURCE_INDEX.md` to confirm which local file matches the need and what GitHub source it mirrors or adapts.
 - When the pack already contains a curated local reference for the current task, read that local reference first and treat it as a valid retrieval source with provenance.
 - Use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
 - If `chub` has no actionable entry or lacks required version-specific detail, use Context7 as fallback/accelerator (`resolve-library-id` -> `query-docs`).
-- If `memoryai` returns repeated `5xx` or timeout errors in the same session, enter memory-degraded mode: stop further memory calls for the session and continue with `chub`/`Context7`.
 - If retrieval does not provide verifiable evidence for a technical claim, return `không đủ dữ liệu` instead of guessing.
 - Use targeted `rg`/`grep` and focused file reads for local code discovery, declarations, and implementation checks.
 - Use `rg` or `grep` for bodies, strings, config keys, JSON, CSS, Markdown, or raw text.
@@ -41,20 +37,10 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
   - Never repeat an identical retrieval call (same tool and same query) within the same turn or subtask.
   - Default retrieval budget per subtask: one discovery call plus one refinement call.
   - If retrieval returns empty, unchanged, or non-actionable results twice, stop repeating and switch to focused file reads.
-## MemoryAI Guardrails
-- Treat repeated `memory_bootstrap` in one thread as a warning sign for token waste.
-- Do not call `memory_store` or similar write tools just to restate an already-known preference; recall first.
-- Call `memory_compact` only at chat wrap-up, explicit `chốt phiên`, or when the context is clearly near a limit and compacting is necessary to continue safely.
-- Do not compact during active exploration unless the context is genuinely near a limit and the user-facing work would otherwise suffer.
-- Use `memory_health` only when checking a suspected context-growth problem or right before deciding whether to compact.
-- If memory calls fail with repeated `5xx` or timeout errors, stop memory calls for the session and explicitly declare memory unavailable.
-
 ## Context Hygiene
 - Open a new thread earlier when the current thread becomes long, starts to drift, or accumulates too much stale context.
-- Keep `memory_recall` queries narrow, current-task-specific, and tied to related follow-up work only.
 - Use targeted search and focused reads when the need is code structure discovery, and avoid broad read-all exploration unless narrower retrieval is insufficient.
 - Do not allow retrieval loops: if the same query was already attempted and no new signal exists, do not call it again.
-- In memory-degraded mode, do not infer from old memory context; rely only on current-session evidence and retrieval outputs.
 
 ## Codex Thread Payload Hygiene
 - Treat sudden thread token growth as a reliability bug, not only a pricing issue.
@@ -66,7 +52,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Use a sliding-window dialog history plus a compact summary for older turns.
 - Runtime option: run `scripts/context_guard_thread.js` and route `llmgate` through local thread `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
-- MCPs: `memoryai`, `chub`, `context7`, `serena`.
+- MCPs: `chub`, `context7`, `serena`.
 - Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
 - Local code retrieval/edit: `serena` is preferred once onboarded.
 - Workflow orchestration: gstack-lite gates only (`product-gate`, `engineering-gate`, `ship-gate`), not always-on.
@@ -84,11 +70,11 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Conditional activation:
   - `context-compression`: ON when `Input >= 120,000` tokens or payload is clearly oversized for one-shot; OFF only after `Input <= 90,000` for at least 3 consecutive turns.
   - `prompt-caching`: ON when request pattern is repetitive and cache hit stays `>= 30%`; OFF when cache hit drops to `<= 20%` for 2 windows or stale-cache regressions appear.
-  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon work and only when memory backend is stable (no repeated `5xx` or timeout in the same session). Keep OFF for one-shot or memory-degraded mode.
+  - `hierarchical-agent-memory`: default OFF. ON only for multi-session or long-horizon work with stable persistence backend. Keep OFF for one-shot sessions.
 - Safety precedence:
   - If retrieval has no verifiable evidence, answer `không đủ dữ liệu`.
   - If compression drops critical facts, roll back compression first.
-  - If memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
+  - If persisted memory conflicts with fresh retrieval, trust fresh retrieval and temporarily disable hierarchical memory.
 
 ## Serena And gstack-lite
 - Serena is primary for local code retrieval/edit when local-code complexity is medium or high.
@@ -129,7 +115,7 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Treat `400,000` tokens as the global maximum context budget when the runtime supports it.
 - Under the current `llmgate` + `gpt-5.4` runtime, the observed effective model context window is `258,400`, so the practical hard limit remains `258,400` until the provider or model changes.
 - Open a new thread well before the effective limit; under the current runtime, treat `~250,000` tokens as a warning threshold and hand off earlier if the thread starts to drift.
-- Do not rely on `memory_compact` to rescue an already-saturated thread; prefer a clean handoff into a new thread.
+- Do not rely on compacting alone to rescue an already-saturated thread; prefer a clean handoff into a new thread.
 
 ## Update Logging
 - Maintain `UPDATE_LOG.md` for every approved change to this installed Codex skill.

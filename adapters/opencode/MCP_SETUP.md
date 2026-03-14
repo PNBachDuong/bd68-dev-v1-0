@@ -1,7 +1,6 @@
 # OpenCode MCP Notes For BD68 Dev v1.0
 
 The portable profile assumes these tools if your OpenCode environment exposes them:
-- `memoryai`
 - `chub`
 - `serena` (recommended for local code retrieval/edit)
 

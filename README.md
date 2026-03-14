@@ -42,7 +42,7 @@ This repo is now organized as an IDE-agnostic pack:
 - Prefer the local curated reference before re-browsing the upstream GitHub source when the local file already covers the task.
 
 ## Purpose
-- keep retrieval order consistent with `memoryai`, `chub`, `Context7` fallback, and `Serena`
+- keep retrieval order consistent with `chub`, `Context7` fallback, and `Serena`
 - standardize context hygiene for long-running agent sessions
 - keep the short GPT-5.4 token cost summary behavior available
 - make the BD68 profile portable without requiring non-Codex IDEs to inspect `.codex`
@@ -79,7 +79,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -Targe
 What it does:
 - syncs this pack into `C:\Users\<user>\.codex\skills\bd_dev_kit`
 - injects/updates a marked bootstrap block in `C:\Users\<user>\.codex\AGENTS.md`
-- auto-installs MCP binaries for `memoryai` and `chub` (best effort, with explicit status output)
+- auto-installs MCP binaries for `chub` (best effort, with explicit status output)
 - sets thread runtime base URL to `http://127.0.0.1:8787` under `[model_providers.llmgate]`
 - creates `config.toml` or missing llmgate section automatically if not present
 - creates a backup when `config.toml` already exists
@@ -87,7 +87,7 @@ What it does:
 
 Requirement:
 - target machine needs internet access
-- `node` and `npm` are required to install `memoryai/chub` and to run thread runtime (`context_guard_thread.js`)
+- `node` and `npm` are required to install `chub` and to run thread runtime (`context_guard_thread.js`)
 - if MCP install fails and you still want profile/thread setup only, use `-FailOnMcpInstallError:$false`
 
 Useful optional flags:
