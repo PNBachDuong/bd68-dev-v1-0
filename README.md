@@ -39,6 +39,107 @@ This repo is now organized as an IDE-agnostic pack:
 - keep the short GPT-5.4 token cost summary behavior available
 - make the BD68 profile portable without requiring non-Codex IDEs to inspect `.codex`
 
+## New Machine Quickstart
+For a clean Windows machine:
+
+1. Install the runtime prerequisites:
+- `PowerShell 7`
+- `Node.js` (`npm`, `npx`)
+- `Python` with `uvx`
+- Codex desktop app or OpenCode, depending on your target IDE
+
+2. Clone this repo:
+```powershell
+git clone https://github.com/PNBachDuong/bd68-dev-v1-0.git
+cd bd68-dev-v1-0
+```
+
+3. Install the adapter you want:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -Target codex
+```
+or:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -Target opencode
+```
+
+4. Open a new app session.
+
+What you should get on Codex:
+- `bd_dev_kit` as the core operating profile
+- bundled skills copied into `~/.codex/skills/`
+- `MEMORY.md` and `USER.md` created under `~/.codex/memories/`
+- `chub`, `context7`, and `serena` restored from the MCP snapshot
+
+## How The Kit Works
+This kit has 4 layers:
+
+1. Core profile:
+- `bd_dev_kit` defines the operating rules: retrieval order, planning style, context hygiene, and installation policy.
+
+2. Bundled skills:
+- these are reusable tactics that the core profile can activate for specific jobs such as debugging, codebase reading, or test-first work.
+
+3. MCP layer:
+- `chub`, `context7`, and `serena` provide runtime capabilities for docs and local code work.
+- on Codex, these are snapshot-managed through `templates/codex.mcp_servers.toml`.
+
+4. Memory layer:
+- `~/.codex/memories/MEMORY.md`
+- `~/.codex/memories/USER.md`
+- this replaces the older memory-MCP-heavy approach with a simpler local file model.
+
+Operationally, the preferred path is:
+`rg` -> narrow file discovery -> `serena` for deeper local code retrieval/edit -> `chub` for third-party docs -> `context7` only when `chub` is insufficient.
+
+## Skill And MCP Map
+Core profile:
+- `bd_dev_kit`: the main operating system for the workflow
+
+Bundled skills in this repo:
+- `codebase-inspection`: read and understand code structure before editing
+- `context-compression`: compress oversized context when needed
+- `context-optimization`: reduce waste in context assembly
+- `context-window-management`: keep long threads healthy
+- `gstack-lite`: lightweight phase gates for larger tasks
+- `hierarchical-agent-memory`: legacy reference only, not a default runtime path
+- `mcporter`: workflow guidance for working with MCP servers/tools
+- `prompt-caching`: caching strategy guidance for repetitive workloads
+- `systematic-debugging`: root-cause-first debugging workflow
+- `test-driven-development`: test-first implementation and regression control
+
+Hermes-imported skills currently bundled:
+- `codebase-inspection`
+- `systematic-debugging`
+- `test-driven-development`
+- `mcporter`
+
+Snapshot-managed MCPs on Codex:
+- `chub`: primary third-party docs retrieval
+- `context7`: fallback docs retrieval via `npx @upstash/context7-mcp`
+- `serena`: local code retrieval/edit via `uvx --from git+https://github.com/oraios/serena@...`
+
+## Workflow Simulation
+Example task:
+- "Fix duplicate Stripe webhook handling, add tests, then prepare to ship."
+
+Expected flow:
+1. `bd_dev_kit` sets the operating rules.
+2. `chub` retrieves Stripe docs before any API-shape assumptions.
+3. `rg` narrows the local search to webhook handlers, services, and tests.
+4. `codebase-inspection` helps map the current code flow.
+5. `systematic-debugging` drives root-cause analysis instead of guesswork.
+6. `serena` is used when symbol-level reading or precise code edits are needed.
+7. `test-driven-development` guides writing regression tests before or during the fix.
+8. `gstack-lite` is only used if the task is large enough to justify phase gates.
+9. If a new MCP is added during the session, rerun Codex install so the source snapshot is updated for the next machine.
+
+This means:
+- the core profile decides how to work
+- the skills decide how to tackle the current class of problem
+- the MCPs provide runtime capabilities
+- the memory files preserve stable context across sessions
+
 ## Project Overlay (Multi-Project Support)
 
 BD68 Dev hỗ trợ nhiều project song song thông qua per-project overlay files.

@@ -21,6 +21,19 @@ Date: 2026-03-15
 ### GitHub sync
 - Ready to publish together with Hermes-imported skills, Guard cleanup, and MCP snapshot portability updates
 
+## v2.4 — GitHub Usage Guide Expansion
+Date: 2026-03-15
+
+### Changed
+- `README.md` now includes:
+  - clean-machine quickstart
+  - core skill / bundled skill / MCP / memory layer explanation
+  - Hermes-imported skills summary
+  - workflow simulation for real usage evaluation
+
+### Result
+- GitHub readers can understand not only how to install the kit, but also how the workflow is meant to operate in practice
+
 ## v1.4 — Installation Policy Auto-Sync
 Date: 2026-03-15
 
