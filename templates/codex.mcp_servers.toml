@@ -1,0 +1,11 @@
+[mcp_servers.chub]
+command = 'C:\Users\ngath\AppData\Roaming\npm\chub-mcp.cmd'
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.serena]
+command = "uvx"
+args = ["--from", "git+https://github.com/oraios/serena@6d6f55308f99c6e857ec20f194a8c1766c930f17", "serena", "start-mcp-server", "--context", "codex", "--enable-web-dashboard", "true", "--open-web-dashboard", "false"]
+

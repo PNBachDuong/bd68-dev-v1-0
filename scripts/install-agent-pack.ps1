@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet("", "opencode", "codex")]
     [string]$Target = "",
 
@@ -9,17 +9,9 @@ param(
 
     [string]$OpenCodeRootPath = "",
 
-    [bool]$EnableProxy = $false,
-
-    [bool]$StartProxyNow = $false,
-
-    [bool]$RegisterProxyStartup = $false,
-
     [bool]$InstallMcpBinaries = $true,
 
     [bool]$FailOnMcpInstallError = $true,
-
-    [string]$ProxyBaseUrl = "http://127.0.0.1:8787",
 
     [switch]$InitProject = $false,
 
@@ -148,6 +140,148 @@ function Ensure-UserPathContains {
     return $true
 }
 
+function Get-McpTableBlocks {
+    param([string]$Text)
+
+    $blocks = [ordered]@{}
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return $blocks
+    }
+
+    $pattern = '(?ms)^\[(mcp_servers(?:\.[^\]]+)*)\]\s*\r?\n.*?(?=^\[|\z)'
+    $matches = [regex]::Matches($Text, $pattern)
+    foreach ($match in $matches) {
+        $tableName = $match.Groups[1].Value.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($tableName)) {
+            $blocks[$tableName] = $match.Value.Trim()
+        }
+    }
+
+    return $blocks
+}
+
+function Merge-McpTableBlocks {
+    param(
+        $SourceBlocks,
+        $RuntimeBlocks
+    )
+
+    $merged = [ordered]@{}
+    foreach ($entry in $SourceBlocks.GetEnumerator()) {
+        $merged[$entry.Key] = $entry.Value
+    }
+    foreach ($entry in $RuntimeBlocks.GetEnumerator()) {
+        $merged[$entry.Key] = $entry.Value
+    }
+
+    return $merged
+}
+
+function Convert-McpTableBlocksToText {
+    param($Blocks)
+
+    $parts = New-Object System.Collections.Generic.List[string]
+    foreach ($entry in $Blocks.GetEnumerator()) {
+        $parts.Add(($entry.Value).Trim())
+    }
+
+    return ($parts -join "`r`n`r`n").Trim()
+}
+
+function Remove-McpSyncContent {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return ""
+    }
+
+    $withoutManaged = [regex]::Replace($Text, '(?ms)^# BD68 MCP SYNC START\r?\n.*?^# BD68 MCP SYNC END\r?\n?', '')
+    $withoutTables = [regex]::Replace($withoutManaged, '(?ms)^\[(mcp_servers(?:\.[^\]]+)*)\]\s*\r?\n.*?(?=^\[|\z)', '')
+    $normalized = [regex]::Replace($withoutTables.Trim(), '(\r?\n){3,}', "`r`n`r`n")
+
+    return $normalized.Trim()
+}
+
+function Set-McpSyncBlock {
+    param(
+        [string]$Path,
+        [string]$Block
+    )
+
+    $existing = ""
+    if (Test-Path -LiteralPath $Path) {
+        $existing = Get-Content -LiteralPath $Path -Raw
+    }
+
+    $base = Remove-McpSyncContent -Text $existing
+    if ([string]::IsNullOrWhiteSpace($Block)) {
+        if ([string]::IsNullOrWhiteSpace($base)) {
+            Set-Content -LiteralPath $Path -Value "" -Encoding UTF8
+        } else {
+            Set-Content -LiteralPath $Path -Value ($base.TrimEnd() + "`r`n") -Encoding UTF8
+        }
+        return
+    }
+
+    $wrapped = "# BD68 MCP SYNC START`r`n$Block`r`n# BD68 MCP SYNC END"
+    if ([string]::IsNullOrWhiteSpace($base)) {
+        $updated = $wrapped + "`r`n"
+    } else {
+        $updated = $base.TrimEnd() + "`r`n`r`n" + $wrapped + "`r`n"
+    }
+
+    Set-Content -LiteralPath $Path -Value $updated -Encoding UTF8
+}
+
+function New-ChubMcpBlock {
+    param([string]$CommandPath)
+
+    return @"
+[mcp_servers.chub]
+command = '$CommandPath'
+"@.Trim()
+}
+
+function Normalize-SerenaMcpBlock {
+    param([string]$Block)
+
+    if ([string]::IsNullOrWhiteSpace($Block)) {
+        return $Block
+    }
+
+    $defaultRef = "git+https://github.com/oraios/serena@6d6f55308f99c6e857ec20f194a8c1766c930f17"
+    $gitRef = $defaultRef
+    $refMatch = [regex]::Match($Block, 'git\+https://github\.com/oraios/serena[^"]*')
+    if ($refMatch.Success) {
+        $gitRef = $refMatch.Value
+    }
+
+    $hasDashboardFlags = ($Block -match '--enable-web-dashboard') -or ($Block -match '--open-web-dashboard')
+    if ($hasDashboardFlags) {
+        return @"
+[mcp_servers.serena]
+command = "uvx"
+args = ["--from", "$gitRef", "serena", "start-mcp-server", "--context", "codex", "--enable-web-dashboard", "true", "--open-web-dashboard", "false"]
+"@.Trim()
+    }
+
+    return @"
+[mcp_servers.serena]
+command = "uvx"
+args = ["--from", "$gitRef", "serena", "start-mcp-server", "--context", "codex"]
+"@.Trim()
+}
+
+function Normalize-McpTableBlocks {
+    param($Blocks)
+
+    if ($Blocks.Keys -contains "mcp_servers.serena") {
+        $Blocks["mcp_servers.serena"] = Normalize-SerenaMcpBlock -Block $Blocks["mcp_servers.serena"]
+    }
+
+    return $Blocks
+}
+
 function Install-McpBinariesForCodex {
     $result = [ordered]@{
         ChubPath = ""
@@ -171,128 +305,6 @@ function Install-McpBinariesForCodex {
     $result.ChubPath = $chubPath
 
     return [pscustomobject]$result
-}
-
-function Set-LlmgateBaseUrl {
-    param(
-        [string]$ConfigPath,
-        [string]$BaseUrl
-    )
-
-    $configExisted = Test-Path -LiteralPath $ConfigPath
-    $backupPath = ""
-    $text = ""
-    if ($configExisted) {
-        $backupPath = "$ConfigPath.bd68-v1.1.bak"
-        Copy-Item -LiteralPath $ConfigPath -Destination $backupPath -Force
-        $text = Get-Content -LiteralPath $ConfigPath -Raw
-    }
-
-    if ([string]::IsNullOrWhiteSpace($text)) {
-        $newText = "[model_providers.llmgate]`r`nbase_url = `"$BaseUrl`"`r`n"
-        Set-Content -LiteralPath $ConfigPath -Value $newText -Encoding UTF8
-        return [pscustomobject]@{
-            ConfigPath = $ConfigPath
-            BackupPath = $backupPath
-            OldBaseUrl = "(new file)"
-            NewBaseUrl = $BaseUrl
-            ConfigCreated = (-not $configExisted)
-            AddedLlmgateSection = $true
-        }
-    }
-
-    $pattern = '(\[model_providers\.llmgate\][^\[]*?base_url\s*=\s*")([^"]*)(")'
-    $m = [regex]::Match($text, $pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
-    $oldBase = ""
-    $addedSection = $false
-    $newText = $text
-
-    if ($m.Success) {
-        $oldBase = $m.Groups[2].Value
-        $start = $m.Groups[2].Index
-        $length = $m.Groups[2].Length
-        $newText = $text.Remove($start, $length).Insert($start, $BaseUrl)
-    } else {
-        $sectionPattern = '(?m)^\[model_providers\.llmgate\]\s*$'
-        $sectionMatch = [regex]::Match($text, $sectionPattern)
-        if ($sectionMatch.Success) {
-            $oldBase = "(missing)"
-            $insertAt = $sectionMatch.Index + $sectionMatch.Length
-            $insertText = "`r`nbase_url = `"$BaseUrl`"`r`n"
-            $newText = $text.Insert($insertAt, $insertText)
-        } else {
-            $oldBase = "(section missing)"
-            $addedSection = $true
-            $newText = $text.TrimEnd() + "`r`n`r`n[model_providers.llmgate]`r`nbase_url = `"$BaseUrl`"`r`n"
-        }
-    }
-
-    Set-Content -LiteralPath $ConfigPath -Value $newText -Encoding UTF8
-
-    return [pscustomobject]@{
-        ConfigPath = $ConfigPath
-        BackupPath = $backupPath
-        OldBaseUrl = $oldBase
-        NewBaseUrl = $BaseUrl
-        ConfigCreated = $false
-        AddedLlmgateSection = $addedSection
-    }
-}
-
-function Get-PreferredPowerShell {
-    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-    if ($null -ne $pwsh) { return $pwsh.Source }
-    $ps = Get-Command powershell -ErrorAction SilentlyContinue
-    if ($null -ne $ps) { return $ps.Source }
-    throw "Cannot find PowerShell executable."
-}
-
-function Register-ProxyStartupLauncher {
-    param(
-        [string]$InstallRoot
-    )
-
-    $startupDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup"
-    Ensure-Directory -Path $startupDir
-    $launcherPath = Join-Path $startupDir "bd68-context-guard-thread.cmd"
-
-    $pwsh = Get-PreferredPowerShell
-    $safeRoot = $InstallRoot.Replace("'", "''")
-    $line = '"' + $pwsh + '" -NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "Set-Location ''' + $safeRoot + '''; .\scripts\start_context_guard_thread.ps1 -Background"'
-    Set-Content -LiteralPath $launcherPath -Value "@echo off`r`n$line`r`n" -Encoding ASCII
-    return $launcherPath
-}
-
-function Start-ProxyDetachedNow {
-    param(
-        [string]$InstallRoot
-    )
-
-    $pwsh = Get-PreferredPowerShell
-    $safeRoot = $InstallRoot.Replace("'", "''")
-    $cmd = "Set-Location '$safeRoot'; .\scripts\start_context_guard_thread.ps1 -Background"
-    Start-Process -FilePath $pwsh -ArgumentList @("-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-Command", $cmd) | Out-Null
-}
-
-function Wait-ProxyHealth {
-    param(
-        [string]$HealthUrl = "http://127.0.0.1:8787/__guard/health",
-        [int]$Retries = 12,
-        [int]$DelayMs = 500
-    )
-
-    for ($i = 0; $i -lt $Retries; $i++) {
-        try {
-            $resp = Invoke-RestMethod -Method Get -Uri $HealthUrl -TimeoutSec 3
-            if ($null -ne $resp -and $resp.ok -eq $true) {
-                return $true
-            }
-        } catch {
-            # retry
-        }
-        Start-Sleep -Milliseconds $DelayMs
-    }
-    return $false
 }
 
 if ($Target -eq "opencode") {
@@ -336,10 +348,32 @@ if ($Target -eq "codex") {
     $skillsRoot = Join-Path $codexRoot "skills"
     $installRoot = Join-Path $skillsRoot "bd_dev_kit"
     $agentsPath = Join-Path $codexRoot "AGENTS.md"
-    $configPath = Join-Path $codexRoot "config.toml"
+    $runtimeConfigPath = Join-Path $codexRoot "config.toml"
+    $mcpSnapshotPath = Join-Path $repoRoot "templates\codex.mcp_servers.toml"
+
+    $snapshotDir = Split-Path -Parent $mcpSnapshotPath
+    Ensure-Directory -Path $snapshotDir
+
+    $snapshotText = ""
+    if (Test-Path -LiteralPath $mcpSnapshotPath) {
+        $snapshotText = Get-Content -LiteralPath $mcpSnapshotPath -Raw
+    }
+    $runtimeConfigText = ""
+    if (Test-Path -LiteralPath $runtimeConfigPath) {
+        $runtimeConfigText = Get-Content -LiteralPath $runtimeConfigPath -Raw
+    }
+
+    $snapshotBlocks = Get-McpTableBlocks -Text $snapshotText
+    $runtimeBlocks = Get-McpTableBlocks -Text $runtimeConfigText
+    $mergedMcpBlocks = Merge-McpTableBlocks -SourceBlocks $snapshotBlocks -RuntimeBlocks $runtimeBlocks
+    $mergedMcpBlocks = Normalize-McpTableBlocks -Blocks $mergedMcpBlocks
 
     Ensure-Directory -Path $codexRoot
     Ensure-Directory -Path $skillsRoot
+    $mergedMcpText = Convert-McpTableBlocksToText -Blocks $mergedMcpBlocks
+    Set-Content -LiteralPath $mcpSnapshotPath -Value ($mergedMcpText + "`r`n") -Encoding UTF8
+    Set-McpSyncBlock -Path $runtimeConfigPath -Block $mergedMcpText
+
     $copyCode = Copy-PackTree -Source $repoRoot -Destination $installRoot
     $gstackLiteSource = Join-Path $repoRoot "skills\gstack-lite"
     $gstackLiteInstallRoot = Join-Path $skillsRoot "gstack-lite"
@@ -356,10 +390,60 @@ if ($Target -eq "codex") {
         Update-MarkedBlock -Path $agentsPath -StartMarker "<!-- BD68 DEV V1.1 CODEX START -->" -EndMarker "<!-- BD68 DEV V1.1 CODEX END -->" -Block $bootstrapBlock.TrimEnd()
     }
 
+    # ── Sync Skills: bd_dev_kit/skills/ → ~/.codex/skills/ ────────
+    $skillsSrc = Join-Path $PSScriptRoot "..\skills"
+    $skillsDst = $skillsRoot
+
+    if (Test-Path $skillsSrc) {
+        $skillFolders = Get-ChildItem $skillsSrc -Directory
+        foreach ($skill in $skillFolders) {
+            $dst = Join-Path $skillsDst $skill.Name
+            if (-not (Test-Path $dst)) {
+                New-Item -ItemType Directory -Path $dst | Out-Null
+            }
+            # Sync toàn bộ folder (SKILL.md + subdirs)
+            Copy-Item -Path (Join-Path $skill.FullName "*") -Destination $dst -Recurse -Force
+            Write-Host "[BD68] Synced skill: $($skill.Name)" -ForegroundColor Green
+        }
+        Write-Host "[BD68] Skills sync complete ($($skillFolders.Count) skills)" -ForegroundColor Green
+    } else {
+        Write-Host "[BD68] WARNING: bd_dev_kit/skills/ not found — skills not synced" -ForegroundColor Yellow
+    }
+
+    # ── memoryai MCP — DISABLED (replaced by local memory layer in v2.0) ──
+    # Kept for reference. Remove entirely in v3.0.
+    # NOTE: v1.4 no longer contains an active memoryai install/config block in this script.
+    # ── end disabled block ────────────────────────────────────────────────
+
+    # ── Memory Layer Setup ────────────────────────────────────────
+    $memoriesDir = Join-Path $codexRoot "memories"
+    if (-not (Test-Path $memoriesDir)) {
+        New-Item -ItemType Directory -Path $memoriesDir | Out-Null
+        Write-Host "[BD68] Created .codex/memories/ directory" -ForegroundColor Green
+    }
+
+    $memFile = Join-Path $memoriesDir "MEMORY.md"
+    if (-not (Test-Path $memFile)) {
+        $memContent = "# Agent Memory`n<!-- Budget: 2200 chars max (~800 tokens). When full, consolidate or replace oldest entries. -->`n<!-- Format: [YYYY-MM-DD] category: note -->`n<!-- Agent manages this file directly -->`n"
+        Set-Content -Path $memFile -Value $memContent -Encoding UTF8
+        Write-Host "[BD68] MEMORY.md created" -ForegroundColor Green
+    }
+
+    $userFile = Join-Path $memoriesDir "USER.md"
+    if (-not (Test-Path $userFile)) {
+        $userContent = "# User Profile`n<!-- Budget: 1375 chars max (~500 tokens). Keep focused on stable preferences. -->`n<!-- Categories: workflow | preferences | communication | projects | constraints -->`n"
+        Set-Content -Path $userFile -Value $userContent -Encoding UTF8
+        Write-Host "[BD68] USER.md created (fill in your profile)" -ForegroundColor Cyan
+    }
+    Write-Host "[BD68] Memory layer ready at $memoriesDir" -ForegroundColor Green
+
     $mcpInstallResult = $null
     if ($InstallMcpBinaries) {
         try {
             $mcpInstallResult = Install-McpBinariesForCodex
+            if (-not [string]::IsNullOrWhiteSpace($mcpInstallResult.ChubPath)) {
+                $mergedMcpBlocks["mcp_servers.chub"] = New-ChubMcpBlock -CommandPath $mcpInstallResult.ChubPath
+            }
         } catch {
             if ($FailOnMcpInstallError) {
                 throw
@@ -368,21 +452,13 @@ if ($Target -eq "codex") {
         }
     }
 
-    $proxyResult = $null
-    if ($EnableProxy) {
-        $proxyResult = Set-LlmgateBaseUrl -ConfigPath $configPath -BaseUrl $ProxyBaseUrl
-    }
-
-    $startupLauncher = ""
-    if ($EnableProxy -and $RegisterProxyStartup) {
-        $startupLauncher = Register-ProxyStartupLauncher -InstallRoot $installRoot
-    }
-
-    $healthOk = $false
-    if ($EnableProxy -and $StartProxyNow) {
-        Start-ProxyDetachedNow -InstallRoot $installRoot
-        $healthOk = Wait-ProxyHealth
-    }
+    $mergedMcpBlocks = Normalize-McpTableBlocks -Blocks $mergedMcpBlocks
+    $mergedMcpText = Convert-McpTableBlocksToText -Blocks $mergedMcpBlocks
+    Set-Content -LiteralPath $mcpSnapshotPath -Value ($mergedMcpText + "`r`n") -Encoding UTF8
+    Set-McpSyncBlock -Path $runtimeConfigPath -Block $mergedMcpText
+    $installedSnapshotPath = Join-Path $installRoot "templates\codex.mcp_servers.toml"
+    Ensure-Directory -Path (Split-Path -Parent $installedSnapshotPath)
+    Set-Content -LiteralPath $installedSnapshotPath -Value ($mergedMcpText + "`r`n") -Encoding UTF8
 
     Write-Host "BD68 Dev v1.1 installed for Codex."
     Write-Host "Skill path (bd_dev_kit): $installRoot"
@@ -392,6 +468,9 @@ if ($Target -eq "codex") {
         Write-Host "Skill path (gstack-lite): skipped (source missing)"
     }
     Write-Host "AGENTS bootstrap path: $agentsPath"
+    Write-Host "Codex config path: $runtimeConfigPath"
+    Write-Host "MCP snapshot path: $mcpSnapshotPath"
+    Write-Host "MCP snapshot tables: $($mergedMcpBlocks.Count)"
     Write-Host "Pack sync robocopy exit: $copyCode"
     if ($gstackLiteCopyCode -ge 0) {
         Write-Host "gstack-lite sync robocopy exit: $gstackLiteCopyCode"
@@ -411,30 +490,7 @@ if ($Target -eq "codex") {
     } else {
         Write-Host "MCP binary install: skipped by flag"
     }
-    if ($EnableProxy -and $null -ne $proxyResult) {
-        Write-Host "Thread base_url updated: $($proxyResult.OldBaseUrl) -> $($proxyResult.NewBaseUrl)"
-        if (-not [string]::IsNullOrWhiteSpace($proxyResult.BackupPath)) {
-            Write-Host "Config backup: $($proxyResult.BackupPath)"
-        } else {
-            Write-Host "Config backup: skipped (new config created)"
-        }
-        Write-Host "Thread config created: $($proxyResult.ConfigCreated)"
-        Write-Host "Thread llmgate section added: $($proxyResult.AddedLlmgateSection)"
-    } else {
-        Write-Host "Thread config update: skipped"
-    }
-    if (-not [string]::IsNullOrWhiteSpace($startupLauncher)) {
-        Write-Host "Thread startup launcher: $startupLauncher"
-    } else {
-        Write-Host "Thread startup launcher: skipped"
-    }
-    if ($EnableProxy -and $StartProxyNow) {
-        Write-Host "Thread health check: $(if ($healthOk) { 'OK' } else { 'FAILED' })"
-        Write-Host "Health URL: http://127.0.0.1:8787/__guard/health"
-    } else {
-        Write-Host "Thread health check: skipped"
-    }
-    Write-Host "Open a new Codex thread (or restart app) to ensure runtime picks up the updated base_url/profile."
+    Write-Host "Open a new Codex thread (or restart app) to ensure runtime picks up the updated profile."
 }
 
 # -- Init Project Overlay --------------------------------------
@@ -475,4 +531,6 @@ if ($InitProject) {
         Write-Host "[BD68] .gitignore.template copied - see file for git tracking options" -ForegroundColor Cyan
     }
 }
+
+
 

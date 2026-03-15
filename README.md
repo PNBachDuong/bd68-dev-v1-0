@@ -7,14 +7,6 @@ This repo is now organized as an IDE-agnostic pack:
 - `references/` contains curated GitHub-backed retrieval sources and optional guidance files
 - `adapters/` contains IDE-specific bootstrap files
 - `scripts/` contains installers or helper scripts
-  - `scripts/codex_guard_send.ps1`: preflight payload budget check + auto mode selection (`Safe/Balanced/Aggressive`)
-  - `scripts/context_guard_thread.js`: local runtime thread route for automatic pre-send guard enforcement
-  - `scripts/context_guard_thread_metrics.ps1`: read latest thread input/output token metrics from runtime log
-  - `scripts/context_guard_thread_trace.ps1`: show pipeline metrics for `input -> thread -> llmgate` and `llmgate -> thread`
-  - `scripts/context_guard_thread_status.ps1`: thread health + auto failover switch (`thread -> direct llmgate` when thread is down)
-  - `scripts/start_context_guard_thread.ps1`: start thread route (foreground or `-Background`)
-  - `scripts/enable_context_guard_thread.ps1`: point global Codex `llmgate` base_url to the local thread route
-  - `scripts/disable_context_guard_thread.ps1`: rollback global Codex config from backup
 
 ## Current Status
 - Implemented adapters: `OpenCode`, `Codex`
@@ -103,24 +95,25 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-agent-pack.ps1 -Targe
 What it does:
 - syncs this pack into `C:\Users\<user>\.codex\skills\bd_dev_kit`
 - injects/updates a marked bootstrap block in `C:\Users\<user>\.codex\AGENTS.md`
+- merges MCP entries from `templates/codex.mcp_servers.toml` into `C:\Users\<user>\.codex\config.toml`
+- exports the current runtime MCP set back into `templates/codex.mcp_servers.toml` so the source kit stays portable
 - auto-installs MCP binaries for `chub` (best effort, with explicit status output)
-- keeps direct llmgate route by default (no thread/proxy auto-enable)
-- creates `config.toml` or missing llmgate section automatically if not present
-- creates a backup when `config.toml` already exists
-- can optionally enable thread route, startup launcher, and immediate health check when explicitly requested
 
 Requirement:
 - target machine needs internet access
-- `node` and `npm` are required to install `chub` and to run thread runtime (`context_guard_thread.js`)
-- if MCP install fails and you still want profile/thread setup only, use `-FailOnMcpInstallError:$false`
+- `node` and `npm` are required to install `chub`
+- if MCP install fails and you still want profile setup only, use `-FailOnMcpInstallError:$false`
 
 Useful optional flags:
-- `-EnableProxy:$true` to switch to local thread route (`http://127.0.0.1:8787`)
 - `-InstallMcpBinaries:$false` to skip MCP binary installation
 - `-FailOnMcpInstallError:$false` to continue install even if MCP installation fails
-- `-RegisterProxyStartup:$true` to create startup launcher for thread route
-- `-StartProxyNow:$true` to start thread route immediately and run health check
 - `-CodexRootPath <path>` to test against a custom clean directory
 
-After the command completes, open a new Codex thread (or restart app) to ensure runtime picks up the updated profile and thread route.
+MCP portability note:
+- `templates/codex.mcp_servers.toml` is the source-of-truth snapshot for Codex MCP entries.
+- After adding a new global MCP to `~/.codex/config.toml`, rerun `install-agent-pack.ps1 -Target codex` from this repo to export that MCP back into the source kit.
+- Portable commands such as `npx`, `uvx`, and repo-relative launchers move cleanly across machines.
+- Machine-specific absolute paths may still need manual adjustment on the new machine.
+
+After the command completes, open a new Codex thread (or restart app) to ensure runtime picks up the updated profile.
 

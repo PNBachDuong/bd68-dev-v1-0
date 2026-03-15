@@ -50,7 +50,6 @@ description: Personal Codex operating profile for BD68 and WildSoul sessions. Us
 - Store full tool logs out-of-band; keep only compact tool summaries in conversational context.
 - Enforce a pre-send token budget guard: trim tool output, drop non-essential payload, and summarize old turns when over budget.
 - Use a sliding-window dialog history plus a compact summary for older turns.
-- Runtime option: run `scripts/context_guard_thread.js` and route `llmgate` through local thread `127.0.0.1:8787` for auto pre-send enforcement.
 ## Current Stack
 - MCPs: `chub`, `context7`, `serena`.
 - Optional MCP fallback/accelerator for docs: `context7` (after `chub` only when needed).
@@ -129,8 +128,6 @@ MCP overhead token: thấp/vừa/cao
 Token Input: ...
 Token Output: ...
 Tổng phí USD: ...
-Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual
-Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
 ```
 - This pricing profile is for `GPT-5.4` only.
 - If the model changes, rename this pricing profile or create a new skill/version before using a new formula.
@@ -143,10 +140,6 @@ Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính
   - `(input_tokens * 2.50 + output_tokens * 15.00 + cache_read_tokens * 14.85 + cache_write_tokens * 14.85) / 1_000_000`
 - If exact usage is available, use the exact values.
 - If exact usage is unavailable, prefer a clearly labeled estimate instead of inventing precision.
-- Guard Context reporting rules:
-  - If payload guard was applied in the current task, report actual mode (`Safe/Balanced/Aggressive`) and measured reduction.
-  - If payload guard was not applied, set `Guard Context: tắt | chế độ: N/A | đường chạy: N/A`.
-  - If reduction percent is inferred, label it as estimate in the `nguồn` field.
 
 
 

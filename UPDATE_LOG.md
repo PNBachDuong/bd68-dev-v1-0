@@ -2,6 +2,96 @@
 
 Track every approved change to the installed Codex skill and every approved GitHub sync for `BD68 Dev v1.1`.
 
+## v2.3 — Codex MCP Snapshot Auto-Sync
+Date: 2026-03-15
+
+### Added
+- `templates/codex.mcp_servers.toml` as the source-of-truth snapshot for Codex MCP entries
+
+### Changed
+- `scripts/install-agent-pack.ps1` now merges source snapshot MCPs into `~/.codex/config.toml`
+- `scripts/install-agent-pack.ps1` now exports runtime `[mcp_servers.*]` blocks back into the source kit
+- Install policy text now tells users that rerunning Codex install syncs MCPs back to source
+- `README.md` now documents MCP portability and snapshot behavior
+
+### Result
+- New machines can restore the curated Codex MCP set from the source kit
+- Adding a new global MCP and rerunning Codex install updates the source kit snapshot automatically
+
+### GitHub sync
+- Ready to publish together with Hermes-imported skills, Guard cleanup, and MCP snapshot portability updates
+
+## v1.4 — Installation Policy Auto-Sync
+Date: 2026-03-15
+
+### Changed
+- adapters/codex/AGENTS.bootstrap.template
+- adapters/opencode/AGENTS.md.template
+- adapters/opencode/AGENTS.singlefile.template
+
+### Behavior change
+- Khi install skill global: tự động copy về bd_dev_kit/skills/ luôn
+- Remind user commit source kit sau mỗi lần thêm skill mới
+
+## v2.2 — Full Guard Cleanup
+Date: 2026-03-15
+
+### Removed
+- Remaining Guard Context instructions from global and workspace AGENTS mirrors
+- Legacy `codex_guard_*` and `codex_payload_guard*` scripts/docs/artifacts from the kit
+
+### Changed
+- Active source kit, installed kit, and AGENTS mirrors no longer instruct Guard Context reporting
+
+### Not changed
+- Historical log entries remain in `UPDATE_LOG.md` for auditability
+
+## v2.1 — Remove Guard Context From Kit
+Date: 2026-03-15
+
+### Removed
+- Guard Context wrap-up lines from active profile and adapter templates
+- Thread/proxy install path from `scripts/install-agent-pack.ps1`
+- Context Guard runtime scripts and docs from `scripts/`
+- Guard Context references from `README.md` and `SKILL.md`
+
+### Changed
+- Codex install flow now syncs the kit without any Guard Context runtime hooks
+- GPT-5.4 cost block no longer includes Guard Context fields
+
+### Not changed
+- Memory system (`MEMORY.md` / `USER.md`) remains intact
+- Retrieval-first flow, concise-planning, Serena, gstack-lite, and imported skills remain intact
+
+## v2.0 — Hermes Memory + Skills Integration
+Date: 2026-03-15
+
+### Breaking Changes
+- memoryai MCP disabled (commented out, not deleted)
+- Retrieval order updated: MEMORY.md → USER.md → chub → Context7 → Serena
+
+### Added
+- `bd_dev_kit/skills/` — source of truth cho tất cả skills (máy mới install từ đây)
+- Skills sync block trong install-agent-pack.ps1: `bd_dev_kit/skills/` → `~/.codex/skills/`
+- `~/.codex/memories/MEMORY.md` — bounded agent knowledge (~800 token budget)
+- `~/.codex/memories/USER.md` — user profile (~500 token budget)
+- Memory system instructions in all 3 adapter templates
+- Memory setup block in install-agent-pack.ps1
+- Hermes SKILL.md frontmatter format standard (with bd68 extension label)
+- Skill directory structure standard (SKILL.md + references/ + templates/ + scripts/ + assets/)
+- Selective Hermes skills import (full folder copy, metadata migration to bd68:)
+
+### Changed
+- All 5 existing skills: added frontmatter per Hermes standard
+- `hierarchical-agent-memory`: marked DEPRECATED
+- `core/BD68_PROFILE.md`: retrieval order updated
+
+### Not changed
+- Project overlay system (v1.2) — intact
+- Skill/MCP installation policy (v1.3) — intact
+- context guard scripts — intact
+
+
 ## v1.4 — Safe Default: Direct Runtime (Proxy Off)
 Date: 2026-03-15
 
@@ -125,6 +215,8 @@ Date: 2026-03-15
 | 2026-03-15 | codex | Removed MemoryAI from active BD68 kit policy and installer flow (matching prior VFS removal direction). | `AGENTS.md`, `README.md`, `SKILL.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `adapters/opencode/AGENTS.md.template`, `adapters/opencode/MCP_SETUP.md`, `scripts/install-agent-pack.ps1`, `UPDATE_LOG.md` | Active retrieval flow is now `chub` + `Context7` fallback + `serena` for local code. |
 | 2026-03-15 | github | Synced MemoryAI removal from active kit policy/install flow to GitHub. | `README.md`, `SKILL.md`, `UPDATE_LOG.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `adapters/opencode/AGENTS.md.template`, `adapters/opencode/MCP_SETUP.md`, `scripts/install-agent-pack.ps1` | Commit `7636b83`. |
 | 2026-03-15 | codex | Removed status-line directives from active policy/templates (no `StatusLine`/`SkillGateLine` instruction in runtime guidance). | `AGENTS.md`, `SKILL.md`, `core/BD68_PROFILE.md`, `adapters/codex/AGENTS.bootstrap.template`, `adapters/opencode/AGENTS.singlefile.template`, `UPDATE_LOG.md` | Keeps Guard Context summary behavior, but stops status-line policy prompts. |
+
+
 
 
 

@@ -9,6 +9,9 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Prefer execution over ceremony.
 
 ## Retrieval Order
+- Runtime retrieval order: `MEMORY.md (local)` → `USER.md (local)` → `chub` → `Context7` → `Serena`
+- Memory files: `~/.codex/memories/MEMORY.md` and `USER.md`
+- Loaded as frozen context at session start — no MCP required.
 - Open `references/SOURCE_INDEX.md` before using a pack reference so the source and intent are explicit.
 - If the pack already contains a curated local reference for the current need, read that local file first and treat it as a valid retrieval source with provenance.
 - If the environment provides `chub`, use `chub_search` then `chub_get` before coding any third-party API, SDK, or framework.
@@ -90,9 +93,8 @@ Purpose: portable operating profile for BD68 and WildSoul work across agent IDEs
 - Keep answers concise unless the user explicitly wants depth.
 - Surface assumptions when they materially affect behavior.
 - Keep the short GPT-5.4 cost block format if the environment supports cost wrap-up.
-- On end-of-session wrap-up, include Guard Context status:
-  - `Guard Context: bật/tắt | chế độ: Safe/Balanced/Aggressive | đường chạy: runtime-token/manual`
-  - `Guard Context giảm payload: ...% | nguồn: đo thực tế/ước tính`
+
+
 
 
 

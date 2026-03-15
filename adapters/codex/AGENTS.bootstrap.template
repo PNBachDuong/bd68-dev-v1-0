@@ -9,7 +9,6 @@
 - If retrieval does not provide verifiable evidence for a technical claim, answer `không đủ dữ liệu` instead of guessing.
 - Preferred anti-guessing libraries for Python agent flows: `pydantic-ai`, `instructor`, `langsmith` (`langgraph` optional for orchestration-heavy workflows).
 - Apply 5-skill add-on gate: always-on `context-optimization` + `context-window-management`; enable `context-compression` only for large input (`>= 120k`), `prompt-caching` only for repetitive traffic (`cache hit >= 30%`), and `hierarchical-agent-memory` only for stable multi-session tasks.
-- Guard Context runtime path is expected through local thread `127.0.0.1:8787` when enabled.
 
 ## Project Overlay
 At session start, check if `.bd68/PROJECT.md` exists in the current working directory.
@@ -34,14 +33,84 @@ STEP 2 — Install theo target:
   Global MCP:          ~/.codex/config or mcp config (per tool convention)
   Project-only note:   .bd68/PROJECT.md → thêm vào section key_libs hoặc docs
 
-STEP 3 — Sau khi install global:
-  Remind user:
-  "Đã cài global. Nếu muốn sync vào source kit, chạy:
-   install-agent-pack.ps1 -Target codex
-   từ thư mục bd_dev_kit."
+STEP 3 — Sau khi install global, tự động sync về source kit:
+  $skillName = "<tên skill vừa install>"
+  $src = "$env:USERPROFILE\.codex\skills\$skillName"
+  $dst = "C:\Users\ngath\Desktop\Bach Duong IT\2026\Project\bd_dev_kit\skills\$skillName"
+
+  if (Test-Path $src) {
+      Copy-Item -Path $src -Destination $dst -Recurse -Force
+      Write-Host "[BD68] Synced to source kit: $skillName" -ForegroundColor Green
+  } else {
+      Write-Host "[BD68] WARNING: $src not found — sync skipped" -ForegroundColor Yellow
+  }
+
+  MCP global:
+  - chạy `install-agent-pack.ps1 -Target codex` từ source kit
+  - installer sẽ export toàn bộ `[mcp_servers.*]` hiện có từ `~/.codex/config.toml`
+    vào `bd_dev_kit/templates/codex.mcp_servers.toml`
+  - lần cài trên máy mới sẽ import snapshot đó trở lại runtime config
+
+  Sau khi sync xong, remind user:
+  "[BD68] Skill/MCP global đã sync về source kit.
+   Nhớ commit bd_dev_kit lên git để máy mới có đủ thành phần."
 
 NEVER:
   - Cài trực tiếp vào project folder mà không hỏi
   - Giả định target mà không confirm
   - Bỏ qua bước remind sync sau install global
+
+## Memory System
+At session start, load memory files if they exist:
+  - `~/.codex/memories/MEMORY.md` — your accumulated knowledge (~800 token budget)
+  - `~/.codex/memories/USER.md` — user profile and preferences (~500 token budget)
+
+Reading memory: treat both files as frozen context injected at session start.
+
+Managing memory (during session):
+  MEMORY.md entries — use when you learn something new about the environment, project, or workflow:
+    - Add: append `[YYYY-MM-DD] category: note` (keep entries concise)
+    - Replace: overwrite stale entries with updated info
+    - Remove: delete entries that are no longer relevant
+    - Consolidate: when approaching 2200 chars, merge related entries
+
+  USER.md entries — update only when user explicitly states a preference or constraint change.
+    - Never infer preferences — only record what user explicitly states
+    - Budget: 1375 chars max
+
+Format for new entries: `[YYYY-MM-DD] category: one-line note`
+Common categories: project | workflow | decision | constraint | preference | bug | fix
+
+Auto-write trigger — Codex PHẢI ghi MEMORY.md khi session kết thúc nếu có ÍT NHẤT 1 trong các điều kiện sau:
+  TRIGGER A — Quyết định kỹ thuật: đã chọn library/pattern/architecture trong session này
+  TRIGGER B — Bug fix quan trọng: fix lỗi mất >3 tool calls để tìm ra
+  TRIGGER C — Workflow mới: user đã chỉnh cách làm việc hoặc đặt constraint mới
+  TRIGGER D — Session dài: >15 tool calls với kết quả có thể dùng lại
+
+Không ghi nếu:
+  - Session chỉ là câu hỏi đơn giản / giải thích / không có output thực
+  - Không có quyết định nào được chốt
+
+Format bắt buộc khi ghi:
+  [YYYY-MM-DD] category: one-line note (max 120 chars)
+  category = project | decision | fix | pattern | constraint | workflow
+
+Ví dụ entries đúng:
+  [2026-03-15] decision: WildSoul V2 dùng PixiJS cho canvas animation sau khi eval Konva và Phaser
+  [2026-03-15] fix: React useEffect cleanup required khi unmount PixiJS app — không thì memory leak
+  [2026-03-15] constraint: Không thêm npm dependency mới khi chưa confirm với user
+
+Quy trình ghi cuối session:
+  1. Scan lại conversation — có trigger nào không?
+  2. Nếu có → draft entries (tối đa 3 entries per session)
+  3. Kiểm tra budget: nếu MEMORY.md > 1800 chars → consolidate entries cũ trước khi thêm
+  4. Append vào MEMORY.md
+  5. Thông báo ngắn cho user: "[BD68 Memory] Đã ghi X entries vào MEMORY.md"
+
+NEVER:
+  - Invent memory entries not grounded in actual session content
+  - Let memory files exceed their char budgets without consolidating first
+  - Store sensitive data (API keys, passwords, personal info beyond stated preferences)
+  - Ghi >3 entries mỗi session — ưu tiên chất lượng hơn số lượng
+
 
